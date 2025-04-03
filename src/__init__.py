@@ -1,0 +1,3 @@
+"""
+Apartment Notifier package
+"""
