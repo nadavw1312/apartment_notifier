@@ -75,7 +75,7 @@ class TelegramBot:
             await self.start()
         if not self._bot:
             return
-        webhook_url = f"https://c283-85-250-220-244.ngrok-free.app/webhook"
+        webhook_url = f"https://4ef4-85-250-220-244.ngrok-free.app/webhook"
         await self._bot.set_webhook(webhook_url)
 
     async def process_update(self, update_data: dict):
