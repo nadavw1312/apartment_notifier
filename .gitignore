@@ -5,7 +5,6 @@ desktop.ini
 
 # Editor/IDE specific files
 .idea/
-.vscode/
 *.swp
 *.swo
 *~

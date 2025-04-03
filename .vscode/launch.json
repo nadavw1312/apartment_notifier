@@ -1,0 +1,26 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: FastAPI (Uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "args": [
+                "src.app:app",   // 👈 adjust to the location of your app instance
+                "--reload"
+            ],
+            "jinja": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/src"
+            }
+        },
+        {
+            "name": "Python: Scraper",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.workers.facebook_group_scraper",
+            "args": [],
+        }
+    ]
+}
