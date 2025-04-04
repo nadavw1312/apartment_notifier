@@ -10,8 +10,9 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Import the separate modules
-from src.services.telegram.telegram_signup import register_handlers as register_signup_handlers, SignupStates
+from src.services.telegram.telegram_signup import register_handlers as register_signup_handlers
 from src.services.telegram.telegram_preferences import register_handlers as register_preference_handlers, PreferenceStates
+from src.services.telegram.telegram_apartment_message import register_handlers as register_apartment_handlers
 
 class TelegramBot:
     def __init__(self, token: str):
@@ -34,9 +35,10 @@ class TelegramBot:
         if not self._dp:
             return
 
-        # Register handlers from separate modules
+        # Register handlers from separate modules - each module handles its own functionality
         register_preference_handlers(self._dp)
-        register_signup_handlers(self._dp, PreferenceStates)
+        register_signup_handlers(self._dp)
+        register_apartment_handlers(self._dp)
 
     async def send_message(self, chat_id: str, message: str) -> bool:
         """

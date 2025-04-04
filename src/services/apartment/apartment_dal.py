@@ -5,7 +5,6 @@ from sentence_transformers import SentenceTransformer
 from sqlalchemy import text
 from typing import Optional
 import numpy as np
-
 # Initialize the embedding model once.
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -23,7 +22,8 @@ async def add_apartment(
     mentions: list[str],
     summary: str,
     source: str,
-    group_id: str
+    group_id: str,
+    is_valid: bool
 ) -> Apartment:
     # Generate embedding from the text (convert to a list of floats)
     embedding = model.encode(text, output_value="sentence_embedding").tolist()
@@ -44,7 +44,8 @@ async def add_apartment(
         mentions=mentions,
         summary=summary,
         source=source,
-        group_id=group_id
+        group_id=group_id,
+        is_valid=is_valid
     )
     session.add(apartment)
     await session.commit()
@@ -55,6 +56,12 @@ async def add_apartment(
 async def get_all_apartments(session: AsyncSession) -> list[Apartment]:
     result = await session.execute(select(Apartment))
     return list(result.scalars().all())
+
+
+async def get_apartment_by_id(session: AsyncSession, apartment_id: int) -> Optional[Apartment]:
+    """Get a single apartment by its ID"""
+    result = await session.execute(select(Apartment).where(Apartment.id == apartment_id))
+    return result.scalar_one_or_none()
 
 
 async def search_apartments_with_scores(

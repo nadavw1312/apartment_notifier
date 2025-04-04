@@ -12,9 +12,9 @@ import htmlmin
 from src.services.apartment.apartment_bl import create_apartment
 
 # =================== 🔧 CONFIG ===================
-FB_EMAIL = "nadavb1999@gmail.com"
-FB_PASSWORD = "29852064ss"
-GROUP_ID = "423017647874807"
+FB_EMAIL = "dirot2411@gmail.com"
+FB_PASSWORD = "dirotbot2025"
+GROUP_ID = "333022240594651"
 GROUP_URL = f"https://www.facebook.com/groups/{GROUP_ID}"
 SESSION_FILE = "fb_session.json"
 FETCH_INTERVAL = 10  # seconds
@@ -54,25 +54,10 @@ def extract_phone_numbers(text: str):
 
 # 🧠 Playwright extractor
 async def extract_post_data_playwright(post):
+    # Extract text content from the post
     text = await post.inner_text()
-
-    image_elements = await post.query_selector_all("img")
-    image_urls = [
-        await img.get_attribute("src")
-        for img in image_elements
-        if (await img.get_attribute("src")) and "scontent" in await img.get_attribute("src")
-    ]
-
-    user = "Unknown"
-    user_element = await post.query_selector("h2 a, strong a")
-    if user_element:
-        user = await user_element.inner_text()
-
-    timestamp = "Unknown"
-    time_element = await post.query_selector("a[aria-label], abbr[title], time")
-    if time_element:
-        timestamp = await time_element.get_attribute("aria-label") or await time_element.get_attribute("title")
-
+    
+    # Extract post link
     post_link = "Unknown"
     link_element = await post.query_selector("a[href*='/posts/']")
     if link_element:
@@ -80,50 +65,33 @@ async def extract_post_data_playwright(post):
         if href and not href.startswith("http"):
             href = f"https://www.facebook.com{href}"
         post_link = href
-
+    
     return {
         "text": text,
-        "user": user,
-        "timestamp": timestamp,
-        "image_urls": image_urls,
-        "post_link": post_link,
+        "post_link": post_link
     }
 
 # 🧠 BeautifulSoup extractor
 def extract_post_data_soup(html: str):
     soup = BeautifulSoup(html, "html.parser")
-
+    
+    # Extract text content with nice formatting
     text = soup.get_text(separator="\n").strip()
-
-    user_tag = soup.select_one("h2 a, strong a")
-    user = user_tag.get_text(strip=True) if user_tag else "Unknown"
-
-    time_tag = soup.select_one("a[aria-label], abbr[title], time")
-    timestamp = time_tag.get("aria-label") or time_tag.get("title") if time_tag else "Unknown"
-
-    image_tags = soup.find_all("img")
-    image_urls = []
-    for img in image_tags:
-        if isinstance(img, Tag):
-            src = img.get("src")
-            if src and "scontent" in src:
-                image_urls.append(src)
-
+    
+    # Extract post link
+    post_link = "Unknown"
     post_link_tag = soup.select_one("a[href*='/posts/']")
-    post_link = post_link_tag.get("href") if post_link_tag else "Unknown"
-
-    if isinstance(post_link, list):  # Sometimes it's a list
-        post_link = post_link[0]
-
-    if post_link and isinstance(post_link, str) and not post_link.startswith("http"):
-        post_link = f"https://www.facebook.com{post_link}"
-
+    if post_link_tag:
+        href = post_link_tag.get("href")
+        if isinstance(href, list):  # Sometimes it's a list
+            href = href[0]
+        if href and isinstance(href, str) and not href.startswith("http"):
+            href = f"https://www.facebook.com{href}"
+        post_link = href
+    
     return {
         "text": text,
-        "user": user,
-        "timestamp": timestamp,
-        "image_urls": image_urls,
-        "post_link": post_link,
+        "post_link": post_link
     }
 
 # Expand "See more" function
@@ -138,7 +106,7 @@ async def expand_post_content(post):
                 await button.click(force=True)
                 clicked = True
                 # Wait for content to expand
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(0.8)
             
         if clicked:
             print("📖 Expanded 'See more' content")
@@ -165,16 +133,31 @@ async def fetch_group_posts_continuously():
         # Track the highest index we've processed
         last_processed_index = -1
         
+        # Initialize batch collection for posts
+        batch_posts = []
+        batch_texts = []
+        batch_indices = []
+        
         print("🚀 Started fetching loop...")
 
         while True:
             print("🔄 Fetching new posts...")
 
             for i in range(SCROLL_TIMES):
-                scroll_distance = random.randint(500, 1500)
+                scroll_distance = random.randint(400, 700)
                 print(f"📜 Scrolling {i + 1}/{SCROLL_TIMES} by {scroll_distance}px")
                 await page.evaluate(f"window.scrollBy(0, {scroll_distance})")
                 await asyncio.sleep(random.uniform(1.5, 3.5))
+                
+                # Expand all visible posts after each scroll
+                feed = await page.query_selector("div[role='feed']")
+                if feed:
+                    visible_posts = await feed.query_selector_all(":scope > div")
+                    print(f"🔍 Found {len(visible_posts)} visible posts, expanding content...")
+                    for post in visible_posts:
+                        await expand_post_content(post)
+                    print("✅ Expanded all visible posts")
+                    await asyncio.sleep(1)  # Give time for expansion animations to complete
 
             feed = await page.query_selector("div[role='feed']")
             if feed is None:
@@ -202,10 +185,6 @@ async def fetch_group_posts_continuously():
                 try:
                     post = post_blocks[idx]
                     
-                    # First check if there's enough content to process
-                    # Expand post content by clicking "ראה עוד" (See more) buttons
-                    await expand_post_content(post)
-                    
                     html = await post.inner_html()
                     if len(html) < 800:
                         # Mark as processed but skip further processing
@@ -218,37 +197,73 @@ async def fetch_group_posts_continuously():
                         await asyncio.sleep(random.uniform(0, 1))
                         continue
                     
-                    # Process with LLM 
+                    # Add post to batch for processing
                     minified_html = minify_html(html)
-                    llm_data = extract_full_post_data_from_html(minified_html)
+                    data_soup_obj = extract_post_data_soup(minified_html)
+                    data_playwright_obj = await extract_post_data_playwright(post)
                     
-                    # Combine data
-                    data = {
-                        "text": llm_data["text"],
-                        "user": llm_data["user"],
-                        "timestamp": llm_data["timestamp"],
-                        "image_urls": llm_data["images"],
-                        "post_link": llm_data["post_link"],
-                        "price": llm_data["price"],
-                        "location": llm_data["location"],
-                        "phone_numbers": llm_data["phone_numbers"],
-                        "mentions": llm_data["mentions"],
-                        "summary": llm_data["summary"],
-                        "source": "facebook",
-                        "group_id": GROUP_ID,
-                    }
+                    # Store both versions of the text and the entire HTML
+                    batch_posts.append({
+                        "html": minified_html,
+                        "data_soup": data_soup_obj,
+                        "data_playwright": data_playwright_obj
+                    })
+                    batch_texts.append(data_soup_obj["text"])  # Use soup text for LLM
+                    batch_indices.append(idx)
                     
-                    
-                    # Save to database if it's an apartment post
-                    if is_apartment_post(data["text"]) or data["user"] != "":
-                        async with SQL_DB_MANAGER.get_session_with_transaction() as session:
-                            await create_apartment(session, **data)
-                            new_posts_count += 1
-                            print(f"📝 Processed new post {new_posts_count}: {data['post_link']}")
-                    
-                    # Update the last processed index
-                    last_processed_index = idx
-
+                    # Process batch when it reaches size 10 or we're at the end
+                    if len(batch_posts) >= 10 or idx == post_count - 1:
+                        if batch_posts:
+                            print(f"🔄 Processing batch of {len(batch_posts)} posts")
+                            
+                            try:
+                                # Process all posts in the batch at once
+                                batch_results = process_posts_batch(batch_texts)
+                                
+                                # Save the results to database
+                                for i, result in enumerate(batch_results):
+                                    # Get original post HTML for reference if needed
+                                    original_post_data = batch_posts[i]
+                                    original_post_link = original_post_data["data_soup"]["post_link"]
+                                    
+                                    # Prepare data for database
+                                    data = {
+                                        "text": result["text"],
+                                        "user": result["user"],
+                                        "timestamp": result["timestamp"],
+                                        "image_urls": result.get("images", []),  # Use get with default for safety
+                                        "post_link": original_post_link if original_post_link != "Unknown" else result["post_link"],
+                                        "price": result["price"],
+                                        "location": result["location"],
+                                        "phone_numbers": result["phone_numbers"],
+                                        "mentions": result["mentions"],
+                                        "summary": result["summary"],
+                                        "source": "facebook",
+                                        "group_id": GROUP_ID,
+                                        "is_valid": result["is_valid"]
+                                    }
+                                    
+                                    # Save to database if it's an apartment post
+                                    if is_apartment_post(data["text"]) or data["user"] != "":
+                                        async with SQL_DB_MANAGER.get_session_with_transaction() as session:
+                                            await create_apartment(session, **data)
+                                            new_posts_count += 1
+                                            print(f"📝 Processed new post {new_posts_count}: {data['post_link']}")
+                                    
+                                    # Update the processed index
+                                    last_processed_index = batch_indices[i]
+                                
+                            except Exception as e:
+                                print(f"⚠️ Error processing batch: {e}")
+                                # Mark all posts in batch as processed even if there was an error
+                                if batch_indices:
+                                    last_processed_index = batch_indices[-1]
+                            
+                            # Clear the batches
+                            batch_posts = []
+                            batch_texts = []
+                            batch_indices = []
+                
                 except Exception as e:
                     print(f"⚠️ Error parsing post at index {idx}:", e)
                     # Still mark as processed even if there was an error
@@ -288,7 +303,7 @@ def extract_full_post_data_from_html(html: str) -> dict:
         "1. user: The full name of the user who posted.\n"
         "2. timestamp: The date and time the post was uploaded.\n"
         "3. post_link: A direct permalink to the post if available.\n"
-        "4. text: The full human-readable content of the post (ignore layout, comments, ads, etc.).\n"
+        "4. text: The full human-readable content of the post shuold be same content more orgnaized (ignore layout, comments, ads, etc.).\n"
         "5. price: The rent price or total cost if mentioned (in NIS).\n"
         "6. location: The location of the apartment if mentioned.\n"
         "7. phone_numbers: An array of phone numbers in the post (e.g. 05XXXXXXXX).\n"
@@ -302,6 +317,38 @@ def extract_full_post_data_from_html(html: str) -> dict:
         raise RuntimeError("DeepSeek API returned None")
     return json.loads(response)
 
+def process_posts_batch(posts_data: list) -> list:
+    """Process a batch of post texts and extract apartment data for each"""
+    system_prompt = (
+        "You are an intelligent text analyzer and HTML parser that extracts key data from Facebook posts. "
+        "I will provide you with an array of Facebook post texts from apartment rental groups. "
+        "Your job is to analyze each text and return an array of structured JSON objects IN THE SAME ORDER as the input array. "
+        "The length of your output array must match the length of the input array. "
+        "For each post text in the input array, extract the following information as a JSON object:\n\n"
+        "1. user: The full name of the user who posted.\n"
+        "2. timestamp: The date and time the post was uploaded.\n"
+        "3. post_link: A direct permalink to the post if available.\n"
+        "4. text: The full human-readable content of the post shuold be same content more orgnaized (ignore layout, comments, ads, etc.).\n"
+        "6. price: The rent price or total cost if mentioned (in NIS).\n"
+        "7. location: The location of the apartment if mentioned.\n"
+        "8. phone_numbers: An array of phone numbers in the post (e.g. 05XXXXXXXX).\n"
+        "9. images: An array of image URLs that are part of the post content (exclude icons and irrelevant assets).\n"
+        "10. mentions: List of specific words or keywords like 'סאבלט', 'שכירות', etc.\n"
+        "11. summary: A brief natural language summary(in Hebrew) of the post intent or offer.\n"
+        "12. is_valid: A boolean value indicating if the post is a valid apartment post which meant that the user is offering an apartment (true) or not (false).\n"
+        "Return ONLY a valid JSON array containing one object for each input text, in the same order. "
+        "If any field cannot be found, set it to null or empty string/array.\n"
+        "IMPORTANT: The output MUST be a JSON array with the same number of objects as the input array, in the same order.\n"
+    )
+    
+    # Convert list of post texts to JSON string
+    posts_json = json.dumps(posts_data, ensure_ascii=False)
+    
+    response = DeepSeekApi.chat(posts_json, system_prompt=system_prompt)
+    if response is None:
+        raise RuntimeError("DeepSeek API returned None")
+    
+    return json.loads(response)['output']
 
 async def main():
     # Initialize the database

@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.db.sql_database import SQL_DB_MANAGER
-from src.services.user.user_dal import update_user_preferences_by_telegram_id
+from src.services.user.user_dal import update_user_preferences_by_telegram_id, get_user_by_telegram_id
 
 class PreferenceStates(StatesGroup):
     confirm_preferences = State()
@@ -100,7 +100,7 @@ async def handle_min_rooms(message: types.Message, state: FSMContext):
         return
     
     try:
-        min_rooms = int(message.text.strip())
+        min_rooms = float(message.text.strip())
         if min_rooms < 0:
             await message.answer("Number of rooms should be a positive number. Please try again:")
             return
@@ -120,7 +120,7 @@ async def handle_max_rooms(message: types.Message, state: FSMContext):
         return
     
     try:
-        max_rooms = int(message.text.strip())
+        max_rooms = float(message.text.strip())
         if max_rooms < 0:
             await message.answer("Number of rooms should be a positive number. Please try again:")
             return
@@ -171,8 +171,7 @@ async def handle_max_area(message: types.Message, state: FSMContext):
         error = None
         try:
             async with SQL_DB_MANAGER.get_session_with_transaction() as session:
-                # This would require a function to update user preferences
-                # Such a function needs to be created in user_dal.py
+                # Update user preferences
                 await update_user_preferences_by_telegram_id(
                     session,
                     telegram_id=str(message.from_user.id),
@@ -185,6 +184,7 @@ async def handle_max_area(message: types.Message, state: FSMContext):
                 )
         except Exception as e:
             error = str(e)
+            print(f"Error updating preferences: {e}")
         
         if error:
             await message.answer(
@@ -201,9 +201,47 @@ async def handle_max_area(message: types.Message, state: FSMContext):
     except ValueError:
         await message.answer("Please enter a valid number for maximum area:")
 
+async def handle_preferences_button(callback: types.CallbackQuery, state: FSMContext):
+    """Handle preferences button press"""
+    if callback.message is None or callback.from_user is None:
+        return
+    
+    try:
+        await callback.answer()
+    except Exception as e:
+        print(f"Error answering callback: {e}")
+    
+    # Check if user exists first
+    user = None
+    try:
+        async with SQL_DB_MANAGER.get_session_with_transaction() as session:
+            user = await get_user_by_telegram_id(session, str(callback.from_user.id))
+    except Exception as e:
+        print(f"Error checking user: {e}")
+    
+    if not user:
+        await callback.message.answer(
+            "You need to sign up first before setting preferences.\n"
+            "Please click the Sign Up button."
+        )
+        return
+    
+    # Start preferences flow
+    await callback.message.answer("Let's set up your apartment preferences.")
+    await callback.message.answer(
+        "What's the minimum price you're looking for? (in NIS)\n"
+        "Type 0 for no minimum."
+    )
+    # Set the state to waiting_for_min_price to start the flow
+    await state.set_state(PreferenceStates.waiting_for_min_price)
+    print(f"✅ State set to waiting_for_min_price for user {callback.from_user.id}")
+
 def register_handlers(dp):
     """Register all preference handlers"""
+    # Register command handler
     dp.message.register(handle_preferences_command, Command("preferences"))
+    
+    # Register all state handlers for the preference flow
     dp.message.register(handle_confirm_preferences, PreferenceStates.confirm_preferences)
     dp.message.register(handle_min_price, PreferenceStates.waiting_for_min_price)
     dp.message.register(handle_max_price, PreferenceStates.waiting_for_max_price)
@@ -211,3 +249,9 @@ def register_handlers(dp):
     dp.message.register(handle_max_rooms, PreferenceStates.waiting_for_max_rooms)
     dp.message.register(handle_min_area, PreferenceStates.waiting_for_min_area)
     dp.message.register(handle_max_area, PreferenceStates.waiting_for_max_area)
+    
+    # Register the preferences button handler
+    dp.callback_query.register(
+        handle_preferences_button, 
+        lambda c: c.data == "preferences"
+    )

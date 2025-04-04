@@ -26,7 +26,8 @@ async def add_new_apartment(
         mentions=req.mentions,
         summary=req.summary,
         source=req.source,
-        group_id=req.group_id
+        group_id=req.group_id,
+        is_valid=req.is_valid
     )
     return ApartmentResponse.model_validate(apartment)
 

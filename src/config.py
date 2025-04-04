@@ -17,3 +17,6 @@ FACEBOOK_GROUP_ID = os.getenv("FACEBOOK_GROUP_ID", "your_facebook_group_id")
 DOMAIN = os.getenv("DOMAIN", "http://localhost:8080")
 
 DEEPSEEK_API_KEY = "sk-55cea438c7e44b229526f19eba3631e9"
+
+GMAIL_USERNAME = "dirot2411@gmail.com"
+GMAIL_PASSWORD = "dirotbot2025"
