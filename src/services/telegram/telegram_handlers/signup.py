@@ -8,12 +8,13 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from src.services.user.user_dal import add_user, get_user_by_telegram_id
 from src.db.sql_database import SQL_DB_MANAGER
+from src.services.telegram.telegram_messaging import TelegramMessages
 
 class SignupStates(StatesGroup):
     waiting_for_email = State()
     waiting_for_name = State()
 
-async def handle_start(message: types.Message, state: FSMContext):
+async def handle_start(message: types.Message, state: FSMContext, messages: TelegramMessages):
     """Handle /start command to begin registration"""
     if not message.text or not message.from_user:
         return
@@ -31,20 +32,20 @@ async def handle_start(message: types.Message, state: FSMContext):
     
     # Add signup button only if user doesn't exist
     if not user:
-        signup_button = types.InlineKeyboardButton(text="Sign Up", callback_data="signup")
+        signup_button = types.InlineKeyboardButton(text=messages.signup_button(), callback_data="signup")
         keyboard.inline_keyboard.append([signup_button])
     
     # Add preferences button for all users
-    preferences_button = types.InlineKeyboardButton(text="Set Preferences", callback_data="preferences")
+    preferences_button = types.InlineKeyboardButton(text=messages.preferences_button(), callback_data="preferences")
     keyboard.inline_keyboard.append([preferences_button])
     
-    welcome_text = "Welcome to Apartment Notifier!"
+    welcome_text = messages.welcome_message()
     if user:
-        welcome_text += f" Welcome back, {user.name}!"
+        welcome_text += f" {messages.welcome_back(user.name)}"
     
     await message.answer(welcome_text, reply_markup=keyboard)
 
-async def handle_signup_button(callback: types.CallbackQuery, state: FSMContext):
+async def handle_signup_button(callback: types.CallbackQuery, state: FSMContext, messages: TelegramMessages):
     """Handle signup button press"""
     if callback.message is None:
         return
@@ -54,23 +55,24 @@ async def handle_signup_button(callback: types.CallbackQuery, state: FSMContext)
     except Exception as e:
         print(f"Error answering callback: {e}")
     
-    await callback.message.answer("Let's get you signed up.\nPlease enter your email address:")
+    await callback.message.answer(f"{messages.registration_start()}\n{messages.ask_email()}")
     await state.set_state(SignupStates.waiting_for_email)
 
-async def handle_email(message: types.Message, state: FSMContext):
+async def handle_email(message: types.Message, state: FSMContext, messages: TelegramMessages):
     """Handle email input"""
     if not message.text:
         return
+    
     email = message.text.strip()
     if not "@" in email or not "." in email:
-        await message.answer("Please enter a valid email address:")
+        await message.answer(messages.invalid_email())
         return
 
     await state.update_data(email=email)
-    await message.answer("Great! Now please enter your name:")
+    await message.answer(messages.ask_name())
     await state.set_state(SignupStates.waiting_for_name)
 
-async def handle_name(message: types.Message, state: FSMContext):
+async def handle_name(message: types.Message, state: FSMContext, messages: TelegramMessages):
     """Handle name input and complete registration"""
     if not message.text or not message.from_user:
         return
@@ -94,12 +96,12 @@ async def handle_name(message: types.Message, state: FSMContext):
         error = str(e)
 
     if error:
-        await message.answer("Sorry, there was an error completing your signup.\nPlease try again later.")
+        await message.answer(messages.registration_error())
         await state.clear()
         return
 
     # Registration complete
-    await message.answer(f"Great! You're now registered, {name}. Use the /preferences command to set up your preferences.")
+    await message.answer(messages.registration_success(name))
     await state.clear()
 
 def register_handlers(dp):
@@ -112,4 +114,4 @@ def register_handlers(dp):
     dp.callback_query.register(
         handle_signup_button,
         lambda c: c.data == "signup"
-    )
+    ) 

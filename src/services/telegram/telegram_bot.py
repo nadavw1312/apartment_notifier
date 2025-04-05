@@ -9,25 +9,52 @@ from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.storage.memory import MemoryStorage
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Import the separate modules
-from src.services.telegram.telegram_signup import register_handlers as register_signup_handlers
-from src.services.telegram.telegram_preferences import register_handlers as register_preference_handlers, PreferenceStates
-from src.services.telegram.telegram_apartment_message import register_handlers as register_apartment_handlers
+# Import messaging system
+from src.services.telegram.telegram_messaging import Language, get_messages
+
+# Import middleware
+from src.services.telegram.telegram_context import MessageMiddleware
+
+# Import handler registrations
+from src.services.telegram.telegram_handlers.signup import register_handlers as register_signup_handlers
+from src.services.telegram.telegram_handlers.preferences import register_handlers as register_preference_handlers, PreferenceStates
+from src.services.telegram.telegram_handlers.apartments import register_handlers as register_apartment_handlers
 
 class TelegramBot:
-    def __init__(self, token: str):
+    def __init__(self, token: str, language: Language = Language.ENGLISH):
         self.token = token
         self._bot: Optional[Bot] = None
         self._dp: Optional[Dispatcher] = None
         self._session: Optional[AsyncSession] = None
-
+        self._language = language
+        self._messages = get_messages(language)
+    
+    def set_language(self, language: Language):
+        """Set the bot's language"""
+        self._language = language
+        self._messages = get_messages(language)
+        
+        # If the bot is already running, update the middleware
+        if self._dp:
+            # Find and update the message middleware
+            for middleware in self._dp.message.middleware:
+                if isinstance(middleware, MessageMiddleware):
+                    middleware.default_messages = self._messages
+                    middleware.message_providers[language] = self._messages
+    
     async def start(self):
         """Initialize and start the bot"""
         if not self._bot:
             self._bot = Bot(token=self.token)
         
-        # Add in-memory FSM storage here
-        self._dp = Dispatcher(storage=MemoryStorage(), bot=self._bot)
+        # Create dispatcher with memory storage
+        self._dp = Dispatcher(storage=MemoryStorage())
+        
+        # Add message middleware
+        self._dp.message.middleware(MessageMiddleware(self._language))
+        self._dp.callback_query.middleware(MessageMiddleware(self._language))
+        
+        # Register all handlers
         self._setup_handlers()
         
     def _setup_handlers(self):
@@ -36,8 +63,8 @@ class TelegramBot:
             return
 
         # Register handlers from separate modules - each module handles its own functionality
-        register_preference_handlers(self._dp)
         register_signup_handlers(self._dp)
+        register_preference_handlers(self._dp)
         register_apartment_handlers(self._dp)
 
     async def send_message(self, chat_id: str, message: str) -> bool:
@@ -77,7 +104,7 @@ class TelegramBot:
             await self.start()
         if not self._bot:
             return
-        webhook_url = f"https://4ef4-85-250-220-244.ngrok-free.app/webhook"
+        webhook_url = f"https://4520-85-250-220-244.ngrok-free.app/webhook"
         await self._bot.set_webhook(webhook_url)
 
     async def process_update(self, update_data: dict):

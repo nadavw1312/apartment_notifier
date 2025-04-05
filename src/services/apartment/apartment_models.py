@@ -22,3 +22,4 @@ class Apartment(Base, TimestampMixin):
     source: Mapped[str] = mapped_column(TEXT)
     group_id: Mapped[str] = mapped_column(TEXT)
     is_valid: Mapped[bool] = mapped_column(Boolean, default=True)
+    post_id: Mapped[Optional[str]] = mapped_column(TEXT, nullable=True)

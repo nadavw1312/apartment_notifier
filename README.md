@@ -15,9 +15,6 @@ variable.
    ```bash
    poetry install
 
-
-
-
 # 🧠 pgvector Setup on Windows for PostgreSQL 17
 
 This guide walks you through installing and enabling the `pgvector` extension for PostgreSQL 17 on Windows. This is needed to store and query vector embeddings in your database (e.g., for similarity search in apartment listings).
@@ -85,4 +82,154 @@ Open psql using the right port (replace 5433 if using another port):
 Then in the prompt:
 
 CREATE EXTENSION IF NOT EXISTS vector;
+
+
+```
+
+# Facebook Group Scraper
+
+A multi-user, multi-group Facebook scraper system that allows for efficient scraping of apartment listings from Facebook groups. The system uses a configuration-based approach to manage different users, their Facebook sessions, and the groups they need to monitor.
+
+## Features
+
+- **Multi-user support**: Each user can have their own Facebook session stored in the database
+- **Multi-group scraping**: Run scrapers for multiple Facebook groups in parallel
+- **Configuration-based**: Easy to configure through a JSON file
+- **Batch processing**: Process posts in batches for efficiency
+- **Apartment data extraction**: Extract structured data from apartment posts using LLM
+- **Database integration**: Store scraped data and sessions in a SQL database
+
+## Architecture
+
+The system follows SOLID principles with a modular architecture:
+
+- `FacebookGroupScraper`: Core class responsible for scraping a single Facebook group
+- `FacebookScraperManager`: Manager class that handles multiple users and their group configurations
+- `ScraperUserService`: Database service for storing and retrieving user sessions
+- Configuration system: Two-level configuration with system defaults and group-specific settings
+
+## Setup
+
+1. Create a configuration file at `src/workers/facebook/scraper_config.json` using the template below
+2. Set up Facebook credentials for each user, or leave password blank for manual login
+3. Configure the groups to scrape for each user
+4. Run the scraper using the runner script
+
+## Configuration
+
+The configuration file (`src/workers/facebook/scraper_config.json`) has the following structure:
+
+```json
+{
+  "users": [
+    {
+      "email": "your_email@example.com",
+      "password": "your_password",
+      "active": true,
+      "groups": [
+        {
+          "group_id": "333022240594651",
+          "name": "Tel Aviv Apartments",
+          "config": {
+            "fetch_interval": 10,
+            "scroll_times": 5
+          }
+        }
+      ]
+    }
+  ],
+  "system_defaults": {
+    "fetch_interval": 15,
+    "scroll_times": 5,
+    "num_posts_to_fetch": 10,
+    "batch_size": 10,
+    "headless": false
+  }
+}
+```
+
+### Configuration Options
+
+- **users**: List of user configurations
+  - **email**: User's email address (primary key)
+  - **password**: Facebook login password (optional)
+  - **active**: Whether this user is active
+  - **groups**: List of Facebook groups to scrape
+    - **group_id**: Facebook group ID
+    - **name**: Display name for the group
+    - **config**: Group-specific configuration (overrides system defaults)
+- **system_defaults**: Default configuration values for all groups
+
+Configuration is applied in layers:
+1. System defaults (base)
+2. Group-specific config (overrides system defaults)
+
+## Usage
+
+### Running the Scraper
+
+To run the scraper for all active users from the config file:
+
+```bash
+python src/workers/facebook/run_facebook_scrapers.py
+```
+
+To run the scraper for all active users from the database:
+
+```bash
+python src/workers/facebook/run_facebook_scrapers.py --use-db
+```
+
+To run the scraper for a specific user:
+
+```bash
+python src/workers/facebook/run_facebook_scrapers.py --user your_email@example.com
+```
+
+With a custom configuration file:
+
+```bash
+python src/workers/facebook/run_facebook_scrapers.py --config custom_config.json
+```
+
+Limit the number of scraping cycles:
+
+```bash
+python src/workers/facebook/run_facebook_scrapers.py --cycles 5
+```
+
+### First Run
+
+On the first run, if no session exists in the database for a user:
+1. A temporary session file is created
+2. A browser window is opened
+3. Facebook login occurs (automatically if credentials provided, or manually)
+4. The session is saved to the database
+5. The temporary file is deleted
+
+### Database Schema
+
+The scraper uses a database table to store user sessions:
+
+```sql
+CREATE TABLE facebook_scraper_users (
+    email VARCHAR(255) PRIMARY KEY,
+    password VARCHAR(255),
+    session_data TEXT,
+    last_login VARCHAR(255),
+    is_active VARCHAR(10) DEFAULT 'true'
+);
+```
+
+## Development
+
+### Adding a New User
+
+To add a new user:
+1. Add an entry to the `users` array in the configuration file, or
+2. Insert a new record into the `facebook_scraper_users` table
+
+### Adding New Groups to a User
+
+To add a new group to an existing user, add an entry to the user's `groups` array with the group ID and optional configuration.
 

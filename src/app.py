@@ -7,13 +7,14 @@ from src.services.notification.notification_api import router as notification_ro
 from src.services.telegram.telegram_bot import TelegramBot
 from src.config import TELEGRAM_BOT_TOKEN, DOMAIN
 from contextlib import asynccontextmanager
+from src.services.telegram.telegram_messaging.factory import Language
 
 # Ensure the token is not None
 if TELEGRAM_BOT_TOKEN is None:
     raise ValueError("TELEGRAM_BOT_TOKEN is not set in the environment variables.")
 
 # Initialize your custom TelegramBot class
-telegram_bot = TelegramBot(token=TELEGRAM_BOT_TOKEN)
+telegram_bot = TelegramBot(token=TELEGRAM_BOT_TOKEN, language=Language.HEBREW)
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):

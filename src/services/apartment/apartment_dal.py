@@ -3,8 +3,10 @@ from sqlalchemy import select
 from src.services.apartment.apartment_models import Apartment
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import text
-from typing import Optional
+from typing import Optional, List
 import numpy as np
+from sqlalchemy import and_
+
 # Initialize the embedding model once.
 model = SentenceTransformer("all-MiniLM-L6-v2")
 
@@ -23,7 +25,8 @@ async def add_apartment(
     summary: str,
     source: str,
     group_id: str,
-    is_valid: bool
+    is_valid: bool,
+    post_id: Optional[str] = None
 ) -> Apartment:
     # Generate embedding from the text (convert to a list of floats)
     embedding = model.encode(text, output_value="sentence_embedding").tolist()
@@ -45,7 +48,8 @@ async def add_apartment(
         summary=summary,
         source=source,
         group_id=group_id,
-        is_valid=is_valid
+        is_valid=is_valid,
+        post_id=post_id
     )
     session.add(apartment)
     await session.commit()
@@ -241,3 +245,30 @@ async def search_apartments_paginated(
     }
     
     return apartment_objects, pagination
+
+
+async def get_post_ids_by_group(session, group_id: str) -> list:
+    """
+    Get all post IDs for a specific group
+    
+    Args:
+        session: Database session
+        group_id: Group ID
+        
+    Returns:
+        List of post IDs
+    """
+    try:
+        result = await session.execute(
+            select(Apartment.post_id).where(
+                and_(
+                    Apartment.group_id == group_id,
+                    Apartment.post_id != None
+                )
+            )
+        )
+        post_ids = [row[0] for row in result.all()]
+        return post_ids
+    except Exception as e:
+        print(f"Error getting post IDs: {e}")
+        return []
