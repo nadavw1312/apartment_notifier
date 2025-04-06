@@ -4,6 +4,8 @@ Handles bot initialization, message sending, and graceful shutdown.
 """
 
 from typing import Optional
+import asyncio
+import os
 from aiogram import Bot, Dispatcher, types
 from aiogram.exceptions import TelegramAPIError
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -17,8 +19,36 @@ from src.services.telegram.telegram_context import MessageMiddleware
 
 # Import handler registrations
 from src.services.telegram.telegram_handlers.signup import register_handlers as register_signup_handlers
-from src.services.telegram.telegram_handlers.preferences import register_handlers as register_preference_handlers, PreferenceStates
+from src.services.telegram.telegram_handlers.preferences import register_handlers as register_preferences_handlers
 from src.services.telegram.telegram_handlers.apartments import register_handlers as register_apartment_handlers
+from src.services.telegram.telegram_handlers.help import register_handlers as register_help_handlers
+
+# Initialize bot and dispatcher
+token = os.getenv('TELEGRAM_BOT_TOKEN')
+if not token:
+    raise ValueError("TELEGRAM_BOT_TOKEN environment variable is not set")
+
+bot = Bot(token=token)
+dp = Dispatcher(storage=MemoryStorage())
+
+# Register all handlers
+register_signup_handlers(dp)
+register_preferences_handlers(dp)
+register_apartment_handlers(dp)
+register_help_handlers(dp)
+
+async def start_bot():
+    """Start the bot"""
+    try:
+        print("Starting bot...")
+        await dp.start_polling(bot)
+    except Exception as e:
+        print(f"Error starting bot: {e}")
+    finally:
+        await bot.session.close()
+
+if __name__ == "__main__":
+    asyncio.run(start_bot())
 
 class TelegramBot:
     def __init__(self, token: str, language: Language = Language.ENGLISH):
@@ -64,7 +94,7 @@ class TelegramBot:
 
         # Register handlers from separate modules - each module handles its own functionality
         register_signup_handlers(self._dp)
-        register_preference_handlers(self._dp)
+        register_preferences_handlers(self._dp)
         register_apartment_handlers(self._dp)
 
     async def send_message(self, chat_id: str, message: str) -> bool:

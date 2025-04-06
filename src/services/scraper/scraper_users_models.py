@@ -16,7 +16,9 @@ class ScraperUser(Base, TimestampMixin):
     password: Mapped[str | None] = mapped_column(String(255), nullable=True)
     session_data: Mapped[str | None] = mapped_column(Text, nullable=True)  # Stored as JSON string
     last_login: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    is_active: Mapped[str] = mapped_column(String(10), default="true")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    
     
     # Make email + source unique
     __table_args__ = (

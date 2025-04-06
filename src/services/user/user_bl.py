@@ -1,8 +1,91 @@
+from typing import Dict, Any, Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.services.user.user_dal import add_user, update_user_preferences_by_telegram_id
 
-async def create_user(session: AsyncSession, name: str, email: str, password: str, telegram_id: str | None, phone_number: str | None, notify_telegram: bool, notify_email: bool, notify_whatsapp: bool, min_price: int | None, max_price: int | None, min_area: int | None, max_area: int | None, min_rooms: int | None, max_rooms: int | None):
-    return await add_user(session, name, email, password, telegram_id, phone_number, notify_telegram, notify_email, notify_whatsapp, min_price, max_price, min_area, max_area, min_rooms, max_rooms)
+from src.services.user.user_dal import UserDAL
+from src.services.user.user_models import User
 
-async def update_user_preferences(session: AsyncSession, telegram_id: str, min_price: int | None, max_price: int | None, min_area: int | None, max_area: int | None, min_rooms: int | None, max_rooms: int | None):
-    return await update_user_preferences_by_telegram_id(session, telegram_id, min_price, max_price, min_area, max_area, min_rooms, max_rooms)
+class UserBL:
+    """Business Logic Layer for managing users"""
+    
+    @classmethod
+    async def get_user(
+        cls,
+        db: AsyncSession,
+        user_id: int
+    ) -> Optional[User]:
+        """Get a user by ID"""
+        return await UserDAL.get_by_id(db, user_id)
+
+    @classmethod
+    async def get_user_by_email(
+        cls,
+        db: AsyncSession,
+        email: str
+    ) -> Optional[User]:
+        """Get a user by email"""
+        return await UserDAL.get_by_email(db, email)
+
+    @classmethod
+    async def get_all_users(
+        cls,
+        db: AsyncSession
+    ) -> List[User]:
+        """Get all users"""
+        return await UserDAL.get_all(db)
+
+    @classmethod
+    async def get_active_users(
+        cls,
+        db: AsyncSession
+    ) -> List[User]:
+        """Get all active users"""
+        return await UserDAL.get_active(db)
+
+    @classmethod
+    async def create_user(
+        cls,
+        db: AsyncSession,
+        email: str,
+        password: str,
+        name: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        is_active: bool = True
+    ) -> User:
+        """Create a new user"""
+        return await UserDAL.add(
+            db=db,
+            email=email,
+            password=password,
+            name=name,
+            metadata=metadata,
+            is_active=is_active
+        )
+
+    @classmethod
+    async def update_user(
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        **kwargs
+    ) -> Optional[User]:
+        """Update a user"""
+        return await UserDAL.update(db, user_id, **kwargs)
+
+    @classmethod
+    async def set_user_active(
+        cls,
+        db: AsyncSession,
+        user_id: int,
+        is_active: bool
+    ) -> Optional[User]:
+        """Set a user's active status"""
+        return await UserDAL.update_active_status(db, user_id, is_active)
+
+    @classmethod
+    async def delete_user(
+        cls,
+        db: AsyncSession,
+        user_id: int
+    ) -> bool:
+        """Delete a user"""
+        return await UserDAL.delete(db, user_id)

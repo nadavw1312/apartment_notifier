@@ -3,9 +3,10 @@ from sqlalchemy import select
 from src.services.apartment.apartment_models import Apartment
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import text
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 import numpy as np
 from sqlalchemy import and_
+import json
 
 # Initialize the embedding model once.
 model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -272,3 +273,197 @@ async def get_post_ids_by_group(session, group_id: str) -> list:
     except Exception as e:
         print(f"Error getting post IDs: {e}")
         return []
+
+
+class ApartmentDAL:
+    """Data Access Layer for managing apartments"""
+    
+    @classmethod
+    async def get_by_id(
+        cls,
+        db: AsyncSession, 
+        apartment_id: int
+    ) -> Optional[Apartment]:
+        """Get an apartment by ID"""
+        result = await db.execute(
+            select(Apartment).where(Apartment.id == apartment_id)
+        )
+        return result.scalars().first()
+
+    @classmethod
+    async def get_by_source_id(
+        cls,
+        db: AsyncSession, 
+        source: str,
+        source_id: str
+    ) -> Optional[Apartment]:
+        """Get an apartment by source and source ID"""
+        result = await db.execute(
+            select(Apartment).where(
+                and_(
+                    Apartment.source == source,
+                    Apartment.source_id == source_id
+                )
+            )
+        )
+        return result.scalars().first()
+
+    @classmethod
+    async def get_all(
+        cls,
+        db: AsyncSession
+    ) -> List[Apartment]:
+        """Get all apartments"""
+        result = await db.execute(select(Apartment))
+        return list(result.scalars().all())
+
+    @classmethod
+    async def get_active(
+        cls,
+        db: AsyncSession
+    ) -> List[Apartment]:
+        """Get all active apartments"""
+        result = await db.execute(
+            select(Apartment).where(Apartment.is_active == True)
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    async def add(
+        cls,
+        db: AsyncSession, 
+        source: str,
+        source_id: str,
+        title: str,
+        description: Optional[str] = None,
+        price: Optional[float] = None,
+        location: Optional[str] = None,
+        url: Optional[str] = None,
+        images: Optional[List[str]] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        is_active: bool = True
+    ) -> Apartment:
+        """Add a new apartment"""
+        apartment = Apartment(
+            source=source,
+            source_id=source_id,
+            title=title,
+            description=description,
+            price=price,
+            location=location,
+            url=url,
+            images=json.dumps(images) if images else None,
+            metadata=json.dumps(metadata) if metadata else None,
+            is_active=is_active
+        )
+        db.add(apartment)
+        await db.commit()
+        await db.refresh(apartment)
+        return apartment
+
+    @classmethod
+    async def update(
+        cls,
+        db: AsyncSession, 
+        apartment_id: int,
+        **kwargs
+    ) -> Optional[Apartment]:
+        """Update an apartment"""
+        apartment = await cls.get_by_id(db, apartment_id)
+        
+        if not apartment:
+            return None
+        
+        # Special handling for JSON fields
+        if 'images' in kwargs and isinstance(kwargs['images'], list):
+            kwargs['images'] = json.dumps(kwargs['images'])
+        if 'metadata' in kwargs and isinstance(kwargs['metadata'], dict):
+            kwargs['metadata'] = json.dumps(kwargs['metadata'])
+        
+        # Update provided fields
+        for key, value in kwargs.items():
+            if hasattr(apartment, key):
+                setattr(apartment, key, value)
+        
+        await db.commit()
+        await db.refresh(apartment)
+        return apartment
+
+    @classmethod
+    async def update_active_status(
+        cls,
+        db: AsyncSession, 
+        apartment_id: int,
+        is_active: bool
+    ) -> Optional[Apartment]:
+        """Update an apartment's active status"""
+        return await cls.update(db, apartment_id, is_active=is_active)
+
+    @classmethod
+    async def delete(
+        cls,
+        db: AsyncSession, 
+        apartment_id: int
+    ) -> bool:
+        """Delete an apartment"""
+        result = await db.execute(
+            delete(Apartment).where(Apartment.id == apartment_id)
+        )
+        await db.commit()
+        return result.rowcount > 0
+
+    @classmethod
+    async def get_by_source(
+        cls,
+        db: AsyncSession,
+        source: str
+    ) -> List[Apartment]:
+        """Get all apartments from a specific source"""
+        result = await db.execute(
+            select(Apartment).where(Apartment.source == source)
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    async def get_active_by_source(
+        cls,
+        db: AsyncSession,
+        source: str
+    ) -> List[Apartment]:
+        """Get all active apartments from a specific source"""
+        result = await db.execute(
+            select(Apartment).where(
+                and_(
+                    Apartment.source == source,
+                    Apartment.is_active == True
+                )
+            )
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    async def get_by_metadata(
+        cls,
+        db: AsyncSession,
+        metadata_key: str,
+        metadata_value: Any
+    ) -> List[Apartment]:
+        """Get apartments with specific metadata"""
+        result = await db.execute(
+            select(Apartment).where(
+                Apartment.metadata.like(f'%"{metadata_key}":"{metadata_value}"%')
+            )
+        )
+        return list(result.scalars().all())
+
+    @classmethod
+    async def get_processed_post_ids(
+        cls,
+        db: AsyncSession,
+        source: str
+    ) -> List[str]:
+        """Get all processed post IDs for a source"""
+        result = await db.execute(
+            select(Apartment.source_id).where(Apartment.source == source)
+        )
+        return [row[0] for row in result.all()]

@@ -1,5 +1,5 @@
 """
-SharedBrowserManager for handling a single browser instance with multiple tabs.
+SharedBrowserManager for handling browser instances with multiple tabs.
 This improves resource efficiency when running multiple scrapers simultaneously.
 """
 import asyncio
@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 class SharedBrowserManager:
     """
     Manages shared browser instances for multiple scrapers, one per user.
-    Uses a single Chrome process with multiple tabs per user instead of multiple browser instances.
+    Uses a single browser process with multiple tabs per user instead of multiple browser instances.
     """
     # Per-user browsers and contexts
     _browsers = {}  # key: user_id, value: browser
@@ -65,7 +65,7 @@ class SharedBrowserManager:
             return cls._contexts[user_id]
     
     @classmethod
-    async def release(cls, user_id: str):
+    async def release(cls, user_id: str) -> None:
         """
         Release a reference to a user's browser.
         Cleans up resources when no more references exist.
@@ -77,10 +77,11 @@ class SharedBrowserManager:
             if user_id in cls._refs:
                 cls._refs[user_id] -= 1
                 if cls._refs[user_id] <= 0:
-                    await cls.cleanup_user(user_id)
+                    # Make sure this returns None explicitly
+                    await cls._cleanup_user(user_id)
     
     @classmethod
-    async def cleanup_user(cls, user_id: str):
+    async def _cleanup_user(cls, user_id: str) -> None:
         """
         Clean up browser resources for a specific user.
         
@@ -107,14 +108,15 @@ class SharedBrowserManager:
                 print(f"⚠️ Error cleaning up resources for user {user_id}: {e}")
     
     @classmethod
-    async def cleanup(cls):
+    async def cleanup(cls) -> None:
         """
         Clean up all browser resources for all users.
         """
         async with cls._lock:
             user_ids = list(cls._browsers.keys())
             for user_id in user_ids:
-                await cls.cleanup_user(user_id)
+                # Make sure this returns None explicitly
+                await cls._cleanup_user(user_id)
             
             # Clear dictionaries
             cls._browsers.clear()

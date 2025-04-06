@@ -1,0 +1,31 @@
+{
+  "global": {
+    "headless": false,
+    "fetch_interval": 15,
+    "max_items_per_cycle": 30,
+    "scroll_times": 5,
+    "batch_size": 10,
+    "new_posts_only": true,
+    "num_posts_to_fetch": 10
+  },
+  "facebook": {
+    "enabled": true,
+    "users": [
+      {
+        "email": "dirot2411@gmail.com",
+        "password": "dirotbot2025",
+        "active": true,
+        "groups": [
+          {
+            "group_id": "333022240594651",
+            "name": "דירות להשכרה במחירים שפויים תל אביב"
+          }, 
+          {
+            "group_id": "423017647874807",
+            "name": "דירות להשכרה תל אביב ללא תיווך - הקבוצה המובילה בפייסבוק"
+          }
+        ]
+      }
+    ]
+  }
+} 

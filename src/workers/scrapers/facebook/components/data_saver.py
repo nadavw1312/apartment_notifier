@@ -1,7 +1,7 @@
 """Data saving utilities for Facebook scraper."""
 
 from src.db.sql_database import SQL_DB_MANAGER
-from src.services.apartment.apartment_bl import create_apartment
+from src.services.apartment.apartment_bl import ApartmentBL
 
 
 async def save_apartment_data(data, group_id):
@@ -20,7 +20,7 @@ async def save_apartment_data(data, group_id):
         # @asynccontextmanager so we can use "async with" directly
         async with SQL_DB_MANAGER.get_session_with_transaction() as session:
             # Perform the database write operation with transaction support
-            await create_apartment(session, **data)
+            await ApartmentBL.create_apartment(session, **data)
             print(f"💾 [{group_id}] Saved post to database: {data['post_link']}")
             # The transaction will be committed when the context exits normally
             # or rolled back if an exception occurs

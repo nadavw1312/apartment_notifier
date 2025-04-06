@@ -19,7 +19,7 @@
             "name": "Python: Scraper",
             "type": "debugpy",
             "request": "launch",
-            "module": "src.workers.facebook.facebook_scraper_manager",
+            "module": "src.workers.scrapers.scraper_runner",
             "args": [],
         }
     ]
