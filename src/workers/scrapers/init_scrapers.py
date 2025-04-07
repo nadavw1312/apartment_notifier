@@ -60,8 +60,9 @@ async def init_facebook_users(db_session: AsyncSession, config: Dict[str, Any]):
                 email, 
                 password,
                 is_active=True,
-                config={"groups": groups}
             )
+            
+            print("init_facebook_users")
 
 async def init_from_central_config():
     """

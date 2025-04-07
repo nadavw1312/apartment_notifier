@@ -57,22 +57,12 @@ class TelegramDAL:
         cls,
         db: AsyncSession,
         user_id: int,
-        telegram_id: int,
-        username: Optional[str] = None,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        is_active: bool = True
+        telegram_id: int
     ) -> TelegramUser:
         """Add a new Telegram user"""
         telegram_user = TelegramUser(
             user_id=user_id,
-            telegram_id=telegram_id,
-            username=username,
-            first_name=first_name,
-            last_name=last_name,
-            metadata=metadata,
-            is_active=is_active
+            telegram_id=telegram_id
         )
         db.add(telegram_user)
         await db.commit()

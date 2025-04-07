@@ -31,12 +31,6 @@ if not token:
 bot = Bot(token=token)
 dp = Dispatcher(storage=MemoryStorage())
 
-# Register all handlers
-register_signup_handlers(dp)
-register_preferences_handlers(dp)
-register_apartment_handlers(dp)
-register_help_handlers(dp)
-
 async def start_bot():
     """Start the bot"""
     try:
@@ -47,8 +41,6 @@ async def start_bot():
     finally:
         await bot.session.close()
 
-if __name__ == "__main__":
-    asyncio.run(start_bot())
 
 class TelegramBot:
     def __init__(self, token: str, language: Language = Language.ENGLISH):
@@ -74,19 +66,31 @@ class TelegramBot:
     
     async def start(self):
         """Initialize and start the bot"""
-        if not self._bot:
-            self._bot = Bot(token=self.token)
-        
-        # Create dispatcher with memory storage
-        self._dp = Dispatcher(storage=MemoryStorage())
-        
-        # Add message middleware
-        self._dp.message.middleware(MessageMiddleware(self._language))
-        self._dp.callback_query.middleware(MessageMiddleware(self._language))
-        
-        # Register all handlers
-        self._setup_handlers()
-        
+        try:
+            if not self._bot:
+                self._bot = Bot(token=self.token)
+                print("Bot instance created")
+            
+            # Create dispatcher with memory storage
+            self._dp = Dispatcher(storage=MemoryStorage())
+            print("Dispatcher created")
+            
+            # Add message middleware
+            self._dp.message.middleware(MessageMiddleware(self._language))
+            self._dp.callback_query.middleware(MessageMiddleware(self._language))
+            print("Middleware added")
+            
+            # Register all handlers
+            self._setup_handlers()
+            print("Handlers registered")
+            
+            # Start polling
+            await self._dp.start_polling(self._bot)
+            print("Bot polling started")
+        except Exception as e:
+            print(f"Error starting bot: {e}")
+            raise
+
     def _setup_handlers(self):
         """Setup command and message handlers from separate modules"""
         if not self._dp:
@@ -96,6 +100,7 @@ class TelegramBot:
         register_signup_handlers(self._dp)
         register_preferences_handlers(self._dp)
         register_apartment_handlers(self._dp)
+        register_help_handlers(self._dp)
 
     async def send_message(self, chat_id: str, message: str) -> bool:
         """
@@ -117,25 +122,74 @@ class TelegramBot:
 
     async def stop(self):
         """Stop the bot and close the session"""
-        if self._dp:
-            await self._dp.storage.close()
-        if self._bot:
-            await self._bot.session.close()
+        print("Stopping bot...")
+        try:
+            if self._dp:
+                await self._dp.stop_polling()
+                print("Bot polling stopped")
+                await self._dp.storage.close()
+                print("Dispatcher storage closed")
+        except Exception as e:
+            print(f"Error closing dispatcher: {e}")
+        
+        try:
+            if self._bot:
+                await self._bot.session.close()
+                print("Bot session closed")
+        except Exception as e:
+            print(f"Error closing bot session: {e}")
+        
         self._bot = None
         self._dp = None
+        print("Bot stopped successfully")
 
     def set_session(self, session: AsyncSession):
         """Set the database session for user operations"""
         self._session = session 
 
+    async def initialize(self):
+        """Initialize the bot without starting polling"""
+        try:
+            if not self._bot:
+                self._bot = Bot(token=self.token)
+                print("Bot instance created")
+            
+            # Create dispatcher with memory storage
+            self._dp = Dispatcher(storage=MemoryStorage())
+            print("Dispatcher created")
+            
+            # Add message middleware
+            self._dp.message.middleware(MessageMiddleware(self._language))
+            self._dp.callback_query.middleware(MessageMiddleware(self._language))
+            print("Middleware added")
+            
+            # Register all handlers
+            self._setup_handlers()
+            print("Handlers registered")
+        except Exception as e:
+            print(f"Error initializing bot: {e}")
+            raise
+
     async def set_webhook(self, domain: str):
         """Set the webhook for the bot"""
         if not self._bot:
-            await self.start()
+            await self.initialize()
+        
         if not self._bot:
             return
-        webhook_url = f"https://4520-85-250-220-244.ngrok-free.app/webhook"
-        await self._bot.set_webhook(webhook_url)
+            
+        try:
+            # Delete any existing webhook first
+            await self._bot.delete_webhook()
+            print("Existing webhook deleted")
+            
+            # Set the new webhook
+            webhook_url = f"{domain}/webhook"
+            await self._bot.set_webhook(webhook_url)
+            print(f"Webhook set to: {webhook_url}")
+        except Exception as e:
+            print(f"Error setting webhook: {e}")
+            raise
 
     async def process_update(self, update_data: dict):
         """Process an incoming update"""

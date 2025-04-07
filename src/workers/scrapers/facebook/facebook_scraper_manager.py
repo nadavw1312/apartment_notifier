@@ -147,9 +147,35 @@ class FacebookScraperManager(BaseScraperManager[FacebookGroupScraper, FacebookUs
         """
         async with SQL_DB_MANAGER.get_session_with_transaction() as db_session:
             session_data = await ScraperUserBL.get_facebook_session_data(db_session, user.email)
-            # Handle the None case to satisfy the typing system
+            
             if not session_data:
-                return {}
+                # Create new session data if none exists
+                if user.email and user.password:
+                    # Create Facebook session and get data directly as dictionary
+                    session_data = await FacebookGroupScraper.create_session(
+                        email=user.email,
+                        password=user.password
+                    )
+                else:
+                    # Create session without credentials
+                    session_data = await FacebookGroupScraper.create_session()
+                
+                # Convert to dict if it's a StorageState
+                session_dict = dict(session_data) if hasattr(session_data, 'get') else {
+                    'cookies': getattr(session_data, 'cookies', []),
+                    'origins': getattr(session_data, 'origins', [])
+                }
+                
+                # Save session data to database
+                await ScraperUserBL.create_or_update_session_data(
+                    db_session,
+                    email=user.email,
+                    source='facebook',
+                    session_data=session_dict
+                )
+                
+                return session_dict
+            
             return session_data
     
     def _get_user_id(self, user: FacebookUserConfig) -> str:

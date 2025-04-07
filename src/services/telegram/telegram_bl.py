@@ -46,23 +46,13 @@ class TelegramBL:
         cls,
         db: AsyncSession,
         user_id: int,
-        telegram_id: int,
-        username: Optional[str] = None,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        is_active: bool = True
+        telegram_id: int
     ) -> TelegramUser:
         """Create a new Telegram user"""
         return await TelegramDAL.add(
             db=db,
             user_id=user_id,
-            telegram_id=telegram_id,
-            username=username,
-            first_name=first_name,
-            last_name=last_name,
-            metadata=metadata,
-            is_active=is_active
+            telegram_id=telegram_id
         )
 
     @classmethod

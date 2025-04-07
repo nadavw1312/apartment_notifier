@@ -82,8 +82,7 @@ class UserDAL:
         max_area: Optional[int] = None,
         min_rooms: Optional[int] = None,
         max_rooms: Optional[int] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        is_active: bool = True
+        metadata: Optional[Dict[str, Any]] = None
     ) -> User:
         """Add a new user"""
         user = User(
@@ -101,8 +100,7 @@ class UserDAL:
             max_area=max_area,
             min_rooms=min_rooms,
             max_rooms=max_rooms,
-            metadata=metadata,
-            is_active=is_active
+            metadata=metadata
         )
         db.add(user)
         await db.commit()
@@ -164,16 +162,6 @@ class UserDAL:
         await db.commit()
         await db.refresh(user)
         return user
-
-    @classmethod
-    async def update_active_status(
-        cls,
-        db: AsyncSession,
-        user_id: int,
-        is_active: bool
-    ) -> Optional[User]:
-        """Update a user's active status"""
-        return await cls.update(db, user_id, is_active=is_active)
 
     @classmethod
     async def delete(

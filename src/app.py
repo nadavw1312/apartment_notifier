@@ -3,7 +3,6 @@ from aiogram.fsm.storage.memory import MemoryStorage
 from src.db.sql_database import SQL_DB_MANAGER
 from src.services.user.user_api import router as user_router
 from src.services.apartment.apartment_api import router as apartment_router
-from src.services.notification.notification_api import router as notification_router
 from src.services.telegram.telegram_bot import TelegramBot
 from src.config import TELEGRAM_BOT_TOKEN, DOMAIN
 from contextlib import asynccontextmanager
@@ -17,15 +16,35 @@ if TELEGRAM_BOT_TOKEN is None:
 telegram_bot = TelegramBot(token=TELEGRAM_BOT_TOKEN, language=Language.HEBREW)
 
 @asynccontextmanager
-async def lifespan(_: FastAPI):
+async def lifespan(app: FastAPI):
     # Startup logic
-    await SQL_DB_MANAGER.init()
-    await telegram_bot.start()
-    await telegram_bot.set_webhook(DOMAIN)
-    yield
-    # Shutdown logic
-    await SQL_DB_MANAGER.close()
-    await telegram_bot.stop()
+    try:
+        print("Starting application...")
+        await SQL_DB_MANAGER.init()
+        print("Database initialized")
+        await telegram_bot.initialize()
+        print("Telegram bot initialized")
+        await telegram_bot.set_webhook(DOMAIN)
+        print("Webhook set")
+        yield
+    except Exception as e:
+        print(f"Error during startup: {e}")
+        raise
+    finally:
+        # Shutdown logic
+        print("Shutting down application...")
+        try:
+            await telegram_bot.stop()
+            print("Telegram bot stopped")
+        except Exception as e:
+            print(f"Error stopping telegram bot: {e}")
+        
+        try:
+            await SQL_DB_MANAGER.close()
+            print("Database closed")
+        except Exception as e:
+            print(f"Error closing SQL database: {e}")
+        print("Application shutdown complete")
 
 # Create the FastAPI app with lifespan events
 app = FastAPI(
@@ -47,4 +66,3 @@ async def handle_webhook(request: Request):
 
 app.include_router(user_router, prefix="/users", tags=["Users"])
 app.include_router(apartment_router, prefix="/apartments", tags=["Apartments"])
-app.include_router(notification_router, prefix="/notifications", tags=["Notifications"])

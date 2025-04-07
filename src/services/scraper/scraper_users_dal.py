@@ -68,7 +68,6 @@ class ScraperUserDAL:
         source: str,
         password: Optional[str] = None,
         is_active: bool = True,
-        config: Optional[Dict[str, Any]] = None,
         session_data: Optional[Dict[str, Any]] = None
     ) -> ScraperUser:
         """Add a new scraper user"""
@@ -77,7 +76,6 @@ class ScraperUserDAL:
             source=source,
             password=password,
             is_active=is_active,
-            config=json.dumps(config) if config else None,
             session_data=json.dumps(session_data) if session_data else None,
             last_login=datetime.now().isoformat()
         )

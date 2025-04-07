@@ -48,8 +48,7 @@ class UserBL:
         email: str,
         password: str,
         name: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        is_active: bool = True
+        metadata: Optional[Dict[str, Any]] = None
     ) -> User:
         """Create a new user"""
         return await UserDAL.add(
@@ -57,8 +56,7 @@ class UserBL:
             email=email,
             password=password,
             name=name,
-            metadata=metadata,
-            is_active=is_active
+            metadata=metadata
         )
 
     @classmethod
@@ -70,16 +68,6 @@ class UserBL:
     ) -> Optional[User]:
         """Update a user"""
         return await UserDAL.update(db, user_id, **kwargs)
-
-    @classmethod
-    async def set_user_active(
-        cls,
-        db: AsyncSession,
-        user_id: int,
-        is_active: bool
-    ) -> Optional[User]:
-        """Set a user's active status"""
-        return await UserDAL.update_active_status(db, user_id, is_active)
 
     @classmethod
     async def delete_user(

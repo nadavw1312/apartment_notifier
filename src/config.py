@@ -14,7 +14,7 @@ if TELEGRAM_BOT_TOKEN is None:
 FACEBOOK_ACCESS_TOKEN = os.getenv("FACEBOOK_ACCESS_TOKEN", "your_facebook_access_token")
 FACEBOOK_GROUP_ID = os.getenv("FACEBOOK_GROUP_ID", "your_facebook_group_id")
 
-DOMAIN = os.getenv("DOMAIN", "http://localhost:8080")
+DOMAIN = os.getenv("DOMAIN", "https://ab13-77-126-46-8.ngrok-free.app")
 
 DEEPSEEK_API_KEY = "sk-55cea438c7e44b229526f19eba3631e9"
 

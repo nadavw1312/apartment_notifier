@@ -54,7 +54,6 @@ class ScraperUserBL:
         source: str,
         password: Optional[str] = None,
         is_active: bool = True,
-        config: Optional[Dict[str, Any]] = None,
         session_data: Optional[Dict[str, Any]] = None
     ) -> ScraperUser:
         """Create a new scraper user"""
@@ -64,7 +63,6 @@ class ScraperUserBL:
             source=source,
             password=password,
             is_active=is_active,
-            config=config,
             session_data=session_data
         )
 
@@ -131,8 +129,7 @@ class ScraperUserBL:
         db: AsyncSession,
         email: str,
         password: str,
-        is_active: bool = True,
-        config: Optional[Dict[str, Any]] = None
+        is_active: bool = True
     ) -> ScraperUser:
         """Create a new Facebook scraper user"""
         return await cls.create_scraper_user(
@@ -140,8 +137,7 @@ class ScraperUserBL:
             email=email,
             source='facebook',
             password=password,
-            is_active=is_active,
-            config=config
+            is_active=is_active
         )
 
     @classmethod
@@ -189,8 +185,7 @@ class ScraperUserBL:
         email: str,
         source: str,
         password: Optional[str] = None,
-        is_active: bool = True,
-        config: Optional[Dict[str, Any]] = None
+        is_active: bool = True
     ) -> ScraperUser:
         """Create a new scraper user or update if exists"""
         existing_user = await cls.get_scraper_user_by_email_source(db, email, source)
@@ -201,8 +196,7 @@ class ScraperUserBL:
                 db,
                 existing_user.id,
                 password=password,
-                is_active=is_active,
-                config=config
+                is_active=is_active
             )
         
         # Create new user
@@ -211,8 +205,7 @@ class ScraperUserBL:
             email=email,
             source=source,
             password=password,
-            is_active=is_active,
-            config=config
+            is_active=is_active
         )
 
     @classmethod
@@ -257,3 +250,39 @@ class ScraperUserBL:
     ) -> List[ScraperUser]:
         """Get all active Facebook users"""
         return await cls.get_active_scraper_users_by_source(db, 'facebook')
+
+    @classmethod
+    async def create_or_update_session_data(
+        cls,
+        db: AsyncSession,
+        email: str,
+        source: str,
+        session_data: Dict[str, Any]
+    ) -> Optional[ScraperUser]:
+        """Create or update session data for a scraper user.
+        If user doesn't exist, creates a new user with the session data.
+        If user exists, updates their session data.
+        
+        Args:
+            db: Database session
+            email: User's email
+            source: Source platform (e.g., 'facebook')
+            session_data: Session data to store
+            
+        Returns:
+            Updated or created ScraperUser, or None if operation failed
+        """
+        # Try to get existing user
+        user = await cls.get_scraper_user_by_email_source(db, email, source)
+        
+        if user:
+            # Update existing user's session data
+            return await cls.save_user_session_data(db, user.id, session_data)
+        else:
+            # Create new user with session data
+            return await cls.create_scraper_user(
+                db,
+                email=email,
+                source=source,
+                session_data=session_data
+            )
