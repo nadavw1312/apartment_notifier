@@ -21,6 +21,13 @@
             "request": "launch",
             "module": "src.workers.facebook_group_scraper",
             "args": [],
+        },
+        {
+            "name": "Python: Mail Provider",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "src.services.mail_provider.example_usage",
+            "args": [],
         }
     ]
 }
