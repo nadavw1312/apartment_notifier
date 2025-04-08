@@ -25,8 +25,8 @@ class SourceConfig:
 @dataclass
 class UserConfig:
     """Configuration for a user with sources to scrape"""
-    user_id: str
-    auth_data: Dict[str, Any]  # Authentication data (credentials, tokens, etc.)
+    email: str
+    password: str
     active: bool
     sources: List[SourceConfig]
 
@@ -67,15 +67,34 @@ class BaseScraperManager(Generic[T, U, G], ABC):
     
     @abstractmethod
     def _parse_user_configs(self) -> List[U]:
-        """
-        Parse user configurations from loaded config
-        Must be implemented by specific managers
+        """Parse user configurations from loaded config"""
+        users = []
         
-        Returns:
-            List of user configurations
-        """
-        raise NotImplementedError("Subclasses must implement _parse_user_configs")
-    
+        for user_data in self.config.get("users", []):
+            # Parse group configurations
+            groups = []
+            for group_data in user_data.get("groups", []):
+                # Merge group config with system defaults only
+                group_config = self.system_defaults.copy()
+                group_config.update(group_data.get("config", {}))
+                
+                # Create FacebookGroupConfig
+                groups.append(SourceConfig(
+                    source_id=group_data.get("group_id", ""),
+                    name=group_data.get("name", "Unknown Group"),
+                    config=group_config
+                ))
+            
+            # Create user config
+            users.append(UserConfig(
+                email=user_data.get("email", ""),
+                password=user_data.get("password", ""),
+                active=user_data.get("active", False),
+                sources=groups
+            ))
+        
+        return users  
+      
     def get_active_users(self) -> List[U]:
         """Get all active users from config"""
         return [user for user in self.users if self._is_user_active(user)]

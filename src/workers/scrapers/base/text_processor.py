@@ -29,6 +29,8 @@ async def process_text_batch(texts: List[str], system_prompt: str) -> List[Dict[
         text_sample = texts[0][:100] if texts and len(texts) > 0 else "Empty"
         print(f"📤 Input sample: {text_sample}...")
         
+        
+        
         # Use the async version of the DeepSeek API
         response = await DeepSeekApi.achat(
             texts_json, 

@@ -43,21 +43,21 @@ class BaseScraper(ABC):
         if config:
             self.config.update(config)
         
-        # Browser components
-        self.browser = None
-        self.context = None
-        self.page = None
+        # Browser components with type hints
+        self.browser: Optional[Browser] = None
+        self.context: Optional[BrowserContext] = None
+        self.page: Optional[Page] = None
         
         # State tracking
         self.running = False
         self._owns_browser = False
-        self._user_id = None
-        self._session = None
-        self.processed_item_ids = set()
+        self._user_id: Optional[str] = None
+        self._session: Optional[Dict[str, Any]] = None
+        self.processed_item_ids: Set[str] = set()
         
         # Batch processing state
-        self.batch_items = []
-        self.batch_texts = []
+        self.batch_items: List[Dict[str, Any]] = []
+        self.batch_texts: List[str] = []
         
     @abstractmethod
     def _get_source_url(self) -> str:
@@ -88,26 +88,19 @@ class BaseScraper(ABC):
             headless=self.config.get("headless", False)
         )
         
+        if self.context is None:
+            raise RuntimeError("Context is None")
+        
         # Create a new page in this context
         self.page = await self.context.new_page()
         
-        # Additional setup after page creation
-        await self._setup_page()
+        if not self.page:
+            raise RuntimeError("Failed to create new page")
         
         # Navigate to the source URL
         await self.page.goto(self.source_url)
         
         print(f"🚀 Initialized scraper for {self.source_id} (shared browser for user {user_id})")
-    
-    async def initialize(self, session_file: Optional[str] = None):
-        """
-        Initialize the scraper with a local session file
-        
-        Args:
-            session_file: Optional path to session file
-        """
-        # Implementation depends on specific scraper
-        pass
     
     async def _setup_page(self):
         """Set up the page with needed settings and event handlers"""
@@ -267,7 +260,7 @@ class BaseScraper(ABC):
                     data = await self.extract_item_data(item)
                     
                     # Skip invalid items based on implementation-specific criteria
-                    if not await self._is_valid_item(data):
+                    if not self._is_valid_item(data):
                         skipped_count += 1
                         continue
                     
@@ -318,7 +311,7 @@ class BaseScraper(ABC):
         # Default implementation does nothing
         pass
     
-    async def _is_valid_item(self, data: Dict[str, Any]) -> bool:
+    def _is_valid_item(self, data: Dict[str, Any]) -> bool:
         """
         Check if an item is valid based on its data
         Should be overridden by specific scrapers if needed
@@ -329,7 +322,11 @@ class BaseScraper(ABC):
         Returns:
             True if the item is valid, False otherwise
         """
-        # Default implementation considers all items valid
+        # Skip posts without a valid username
+        if data.get("user") == "Unknown":
+            return False
+            
+        # Additional logic can be added here
         return True
     
     def _format_item_log(self, data: Dict[str, Any]) -> str:
@@ -419,6 +416,9 @@ class BaseScraper(ABC):
         try:
             # Process the batch with the text processor
             print(f"🧠 [{self.source_id}] Processing batch of {len(texts)} items with LLM")
+            
+            # Filter out empty texts from the batch
+            texts = [text for text in texts if text.strip()]
             
             # Use the apartment system prompt by default
             # Subclasses can override this method if they need different prompts
@@ -537,22 +537,8 @@ class BaseScraper(ABC):
             Unique identifier for the item
         """
         raise NotImplementedError("Subclasses must implement extract_item_id")
-    
-    @abstractmethod
-    async def extract_item_data(self, item) -> Dict[str, Any]:
-        """
-        Extract relevant data from an item
-        Must be implemented by specific scrapers
         
-        Args:
-            item: The item to extract data from
-            
-        Returns:
-            Dictionary of extracted data
-        """
-        raise NotImplementedError("Subclasses must implement extract_item_data")
-    
-    async def _extract_item_data_base(self, element, page=None) -> Dict[str, Any]:
+    async def extract_item_data(self, element, page=None) -> Dict[str, Any]:
         """
         Base method for extracting data from an item element using Playwright
         Uses template pattern with abstract methods for specific extraction parts
@@ -656,7 +642,7 @@ class BaseScraper(ABC):
             User profile link as string
         """
         raise NotImplementedError("Subclasses must implement _extract_item_user_link")
-        
+    
     async def _extract_additional_item_data(self, element, page) -> Dict[str, Any]:
         """
         Extract any additional data specific to the scraper implementation
@@ -671,11 +657,13 @@ class BaseScraper(ABC):
         """
         return {}
     
+    @abstractmethod    
     async def load_processed_item_ids(self):
         """Load already processed item IDs from storage"""
         # Implementation depends on specific scraper and storage mechanism
         pass
     
+    @abstractmethod
     async def save_item_data(self, data: Dict[str, Any]):
         """
         Save item data to storage
@@ -699,7 +687,7 @@ class BaseScraper(ABC):
         try:
             # Navigation and setup logic
             if self.page is None:
-                await self.initialize()
+                raise Exception("Page not initilaize")
                 
             if self.page is None:
                 print(f"❌ [{self.source_id}] Page initialization failed")
@@ -764,7 +752,7 @@ class BaseScraper(ABC):
                 if self.browser:
                     # Non-awaited close to handle potential type issues
                     try:
-                        self.browser.close()  # Deliberately not awaited
+                        await self.browser.close()  # Deliberately not awaited
                     except Exception as browser_error:
                         print(f"⚠️ [{self.source_id}] Error closing browser: {browser_error}")
                     self.browser = None

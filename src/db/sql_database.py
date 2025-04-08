@@ -13,11 +13,15 @@ class SQLDatabase:
     def __init__(self):
         self.engine: AsyncEngine
         self.session_maker = None
+        self.active = False
 
     async def init(self):
         """Initialize the SQL database engine and session maker."""
         if not isinstance(DATABASE_URL, str):
             raise ValueError("DATABASE_URL must be a string")
+        if self.active is True:
+            raise ValueError("SQLDatabase is already active")
+        
         logger.info(f"Initializing SQL database at: {DATABASE_URL}")
         self.engine = create_async_engine(
             DATABASE_URL, echo=True, pool_size=100, max_overflow=0, pool_pre_ping=True
@@ -25,12 +29,15 @@ class SQLDatabase:
         self.session_maker = async_sessionmaker(self.engine, expire_on_commit=False)
         async with self.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+        
+        self.active = True
         logger.info("✅ SQL Database initialized successfully")
 
     async def close(self):
         """Close the SQL database engine."""
         if self.engine is not None:
             await self.engine.dispose()
+            self.active = True
             logger.info("❌ SQL database engine closed")
         else:
             raise Exception("SQL Database engine is not initialized")

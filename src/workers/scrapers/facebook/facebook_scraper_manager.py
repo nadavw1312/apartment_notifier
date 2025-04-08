@@ -262,15 +262,15 @@ class FacebookScraperManager(BaseScraperManager[FacebookGroupScraper, FacebookUs
             headless = config.get("global", {}).get("headless", False)
             
             # Convert session data to StorageState
-            storage_state = StorageState(
-                cookies=session_data.get("cookies", []),
-                origins=session_data.get("origins", [])
-            )
+            storage_state = {
+                "cookies":session_data.get("cookies", []),
+                "origins":session_data.get("origins", [])
+            }
             
             # Convert StorageState back to dict for get_context
             context_data = {
-                "cookies": storage_state.get("cookies", []),
-                "origins": storage_state.get("origins", [])
+                "cookies": session_data.get("cookies", []),
+                "origins": session_data.get("origins", [])
             }
             
             # Get browser context with session data

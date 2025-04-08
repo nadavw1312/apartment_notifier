@@ -162,8 +162,7 @@ class FacebookGroupScraper(BaseScraper):
             
             return storage_state
 
-    
-    async def initialize_with_session_data(self, session_data: StorageState, user_id: str):
+    async def initialize_with_session_data(self, session_data: Dict[str, Any], user_id: str):
         """
         Initialize the browser and page with provided session data
         
@@ -172,33 +171,15 @@ class FacebookGroupScraper(BaseScraper):
             user_id: User identifier for browser management
         """
         try:
-            # Store user_id for tracking
-            self._user_id = user_id
-            self._session = session_data
+            await super().initialize_with_session_data(session_data,user_id)
             
-            if not self._browser_manager:
-                raise RuntimeError("Browser manager not initialized")
-            
-            # Get context from browser manager
-            self._context = await self._browser_manager.get_context(
-                user_id,
-                session_data,
-                self.DEFAULT_CONFIG["headless"]
-            )
-            
-            if not self._context:
-                raise RuntimeError("Failed to get browser context")
-            
-            # Create a new page in the context
-            self.page = await self._context.new_page()
-            
-            if not self.page:
+            if self.page is None:
                 raise RuntimeError("Failed to create new page")
-            
+
             # Navigate to the group page
             await self.page.goto(self.source_url)
             await self.page.wait_for_selector("div[role='feed']", timeout=30000)  # 30 second timeout
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
             
             print(f"🚀 Initialized scraper for group {self.group_id} with provided session data (user {user_id})")
             
@@ -215,7 +196,7 @@ class FacebookGroupScraper(BaseScraper):
             session_gen = SQL_DB_MANAGER.get_session()
             async for session in session_gen:
                 # Get post IDs
-                post_ids = await ApartmentBL.get_processed_post_ids(session, self.group_id)
+                post_ids = await ApartmentBL.get_post_ids_by_group(session, self.group_id)
                 
                 # Convert to set for faster lookups
                 self.processed_item_ids = set(post_ids)
@@ -368,48 +349,6 @@ class FacebookGroupScraper(BaseScraper):
             print(f"⚠️ [{self.group_id}] Error extracting item ID: {e}")
             return ""
 
-    async def extract_item_data(self, item: Union[Dict[str, Any], ElementHandle]) -> Dict[str, Any]:
-        """
-        Extract relevant data from a post
-        
-        Args:
-            item: The item to extract data from (post element or dict)
-            
-        Returns:
-            Dictionary of extracted data
-        """
-        try:
-            # Handle dictionary
-            if isinstance(item, dict):
-                return item
-            
-            # Handle ElementHandle by using the base extraction method
-            elem = cast(ElementHandle, item)
-            
-            # Use the base extraction method
-            data = await self._extract_item_data_base(elem, self.page)
-            
-            # Add post ID
-            try:
-                item_html = await elem.inner_html()
-                post_id = self.extract_post_id(item_html)
-                if post_id:
-                    data["post_id"] = post_id
-            except Exception:
-                pass
-                
-            # Rename fields to match Facebook-specific field names (for backward compatibility)
-            if "link" in data:
-                data["post_link"] = data.pop("link")
-            if "timestamp" in data:
-                data["post_date_time"] = data.pop("timestamp")
-            if "user" in data:
-                data["user_name"] = data.pop("user")
-                    
-            return data
-        except Exception as e:
-            print(f"⚠️ [{self.group_id}] Error in extract_item_data: {e}")
-            return {}
     
     # Facebook-specific extraction methods
     
@@ -537,62 +476,3 @@ class FacebookGroupScraper(BaseScraper):
         if self.page:
             await self.page.close()
             self.page = None
-
-    async def initialize(self, session_file: Optional[str] = None):
-        """
-        Initialize the scraper with a local session file
-        
-        Args:
-            session_file: Optional path to session file
-        """
-        try:
-            if session_file:
-                # Load session data from file
-                try:
-                    with open(session_file, 'r', encoding='utf-8') as f:
-                        session_data = json.load(f)
-                except FileNotFoundError:
-                    print(f"⚠️ Session file not found: {session_file}")
-                    return
-                except json.JSONDecodeError as e:
-                    print(f"⚠️ Invalid JSON in session file: {e}")
-                    return
-                except UnicodeDecodeError as e:
-                    print(f"⚠️ Encoding error in session file: {e}")
-                    return
-                
-                # Initialize with session data
-                await self.initialize_with_session_data(session_data, "local_user")
-            else:
-                # Initialize without session data
-                if not self._browser_manager:
-                    raise RuntimeError("Browser manager not initialized")
-                
-                # Get context from browser manager
-                self._context = await self._browser_manager.get_context(
-                    "local_user",
-                    None,
-                    self.DEFAULT_CONFIG["headless"]
-                )
-                
-                if not self._context:
-                    raise RuntimeError("Failed to get browser context")
-                
-                # Create a new page in the context
-                self.page = await self._context.new_page()
-                
-                if not self.page:
-                    raise RuntimeError("Failed to create new page")
-                
-                # Navigate to the group page
-                await self.page.goto(self.source_url)
-                await self.page.wait_for_selector("div[role='feed']", timeout=30000)
-                await asyncio.sleep(5)
-                
-                print(f"🚀 Initialized scraper for group {self.group_id} without session data")
-                
-        except Exception as e:
-            print(f"❌ [{self.group_id}] Initialization failed: {e}")
-            if self.page:
-                await self.page.close()
-            raise
