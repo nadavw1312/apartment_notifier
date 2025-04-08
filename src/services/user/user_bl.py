@@ -48,7 +48,8 @@ class UserBL:
         email: str,
         password: str,
         name: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        telegram_id: Optional[str] = None,
+        notify_telegram: bool = False,
     ) -> User:
         """Create a new user"""
         return await UserDAL.add(
@@ -56,7 +57,8 @@ class UserBL:
             email=email,
             password=password,
             name=name,
-            metadata=metadata
+            telegram_id=telegram_id,
+            notify_telegram=notify_telegram
         )
 
     @classmethod

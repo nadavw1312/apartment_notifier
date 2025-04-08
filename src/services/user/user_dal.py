@@ -81,8 +81,7 @@ class UserDAL:
         min_area: Optional[int] = None,
         max_area: Optional[int] = None,
         min_rooms: Optional[int] = None,
-        max_rooms: Optional[int] = None,
-        metadata: Optional[Dict[str, Any]] = None
+        max_rooms: Optional[int] = None
     ) -> User:
         """Add a new user"""
         user = User(
@@ -99,8 +98,7 @@ class UserDAL:
             min_area=min_area,
             max_area=max_area,
             min_rooms=min_rooms,
-            max_rooms=max_rooms,
-            metadata=metadata
+            max_rooms=max_rooms
         )
         db.add(user)
         await db.commit()

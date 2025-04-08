@@ -6,11 +6,20 @@ from aiogram import types, Router
 from aiogram.filters import Command
 
 from src.services.telegram.telegram_bl import TelegramBL
-from src.services.user.user_dal import UserDAL
-from src.services.user.user_models import User
 from src.db.sql_database import SQL_DB_MANAGER
+from src.services.user.user_bl import UserBL
+
 
 router = Router()
+
+async def already_registered_message(message: types.Message):
+    return await message.reply(
+                "You are already registered!\n\n"
+                "Available commands:\n"
+                "/preferences - Set your apartment preferences\n"
+                "/help - Show help message"
+            )
+
 
 @router.message(Command("start"))
 async def start_command(message: types.Message):
@@ -22,16 +31,11 @@ async def start_command(message: types.Message):
         # Check if user already exists
         telegram_user = await TelegramBL.get_telegram_user(session, int(message.from_user.id))
         if telegram_user:
-            await message.reply(
-                "You are already registered!\n\n"
-                "Available commands:\n"
-                "/preferences - Set your apartment preferences\n"
-                "/help - Show help message"
-            )
+            await already_registered_message(message)
             return
 
         # Create new user
-        user = await UserDAL.add(
+        user = await UserBL.create_user(
             session,
             email=f"telegram_{message.from_user.id}@example.com",  # Temporary email
             password="telegram",  # Temporary password
@@ -55,12 +59,7 @@ async def start_command(message: types.Message):
             await message.reply("Something went wrong. Please try again later.")
             return
 
-        await message.reply(
-            "Welcome to the Apartment Notifier bot!\n\n"
-            "Available commands:\n"
-            "/preferences - Set your apartment preferences\n"
-            "/help - Show help message"
-        )
+        await already_registered_message(message)
 
 def register_handlers(dp):
     """Register signup-related handlers"""

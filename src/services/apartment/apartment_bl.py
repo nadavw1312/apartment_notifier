@@ -64,26 +64,6 @@ class ApartmentBL:
         )
 
     @classmethod
-    async def search_apartments(
-        cls,
-        db: AsyncSession,
-        search_text: str,
-        page: int = 0,
-        per_page: int = 10,
-        last_seen_id: Optional[int] = None,
-        last_seen_score: Optional[float] = None
-    ) -> tuple[List[Apartment], dict]:
-        """Search apartments with pagination"""
-        return await ApartmentDAL.search_paginated(
-            session=db,
-            search_text=search_text,
-            page=page,
-            per_page=per_page,
-            last_seen_id=last_seen_id,
-            last_seen_score=last_seen_score
-        )
-
-    @classmethod
     async def get_post_ids_by_group(
         cls,
         db: AsyncSession,

@@ -17,10 +17,11 @@ class SQLDatabase:
 
     async def init(self):
         """Initialize the SQL database engine and session maker."""
+        if self.active is True:
+            logger.info("Can init, SQLDatabase is already active")
+            
         if not isinstance(DATABASE_URL, str):
             raise ValueError("DATABASE_URL must be a string")
-        if self.active is True:
-            raise ValueError("SQLDatabase is already active")
         
         logger.info(f"Initializing SQL database at: {DATABASE_URL}")
         self.engine = create_async_engine(
