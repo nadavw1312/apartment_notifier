@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.db.sql_database import SQL_DB_MANAGER
 from src.services.scraper_users.scraper_users_bl import ScraperUserBL
-from src.services.scraper_users_facebook_groups.bl import ScraperUserFacebookGroupBL
+from src.services.scraper_users_facebook_groups.scraper_users_facebook_groups_bl import ScraperUserFacebookGroupBL
 
 # Central config path
 CENTRAL_CONFIG_PATH = "config/scraper_config.json"

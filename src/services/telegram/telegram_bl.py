@@ -17,23 +17,6 @@ class TelegramBL:
         return await TelegramDAL.get_by_id(db, telegram_id)
 
     @classmethod
-    async def get_telegram_user_by_user_id(
-        cls,
-        db: AsyncSession,
-        user_id: int
-    ) -> Optional[TelegramUser]:
-        """Get a Telegram user by user ID"""
-        return await TelegramDAL.get_by_user_id(db, user_id)
-
-    @classmethod
-    async def get_all_telegram_users(
-        cls,
-        db: AsyncSession
-    ) -> List[TelegramUser]:
-        """Get all Telegram users"""
-        return await TelegramDAL.get_all(db)
-
-    @classmethod
     async def get_active_telegram_users(
         cls,
         db: AsyncSession
@@ -54,32 +37,3 @@ class TelegramBL:
             user_id=user_id,
             telegram_id=telegram_id
         )
-
-    @classmethod
-    async def update_telegram_user(
-        cls,
-        db: AsyncSession,
-        telegram_id: int,
-        **kwargs
-    ) -> Optional[TelegramUser]:
-        """Update a Telegram user"""
-        return await TelegramDAL.update(db, telegram_id, **kwargs)
-
-    @classmethod
-    async def set_telegram_user_active(
-        cls,
-        db: AsyncSession,
-        telegram_id: int,
-        is_active: bool
-    ) -> Optional[TelegramUser]:
-        """Set a Telegram user's active status"""
-        return await TelegramDAL.update_active_status(db, telegram_id, is_active)
-
-    @classmethod
-    async def delete_telegram_user(
-        cls,
-        db: AsyncSession,
-        telegram_id: int
-    ) -> bool:
-        """Delete a Telegram user"""
-        return await TelegramDAL.delete(db, telegram_id) 

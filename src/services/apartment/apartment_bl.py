@@ -8,22 +8,7 @@ from src.services.apartment.apartment_dal import ApartmentDAL
 class ApartmentBL:
     """Business Logic Layer for managing apartments"""
     
-    @classmethod
-    async def get_apartment(
-        cls,
-        db: AsyncSession,
-        apartment_id: int
-    ) -> Optional[Apartment]:
-        """Get an apartment by ID"""
-        return await ApartmentDAL.get_by_id(db, apartment_id)
-
-    @classmethod
-    async def get_all_apartments(
-        cls,
-        db: AsyncSession
-    ) -> List[Apartment]:
-        """Get all apartments"""
-        return await ApartmentDAL.get_all(db)
+    # Note: removed unused methods get_apartment and get_all_apartments
 
     @classmethod
     async def create_apartment(
@@ -45,7 +30,7 @@ class ApartmentBL:
         post_id: Optional[str] = None
     ) -> Apartment:
         """Create a new apartment"""
-        return await ApartmentDAL.add(
+        return await ApartmentDAL.create_apartment(
             session=db,
             user=user,
             timestamp=timestamp,
@@ -71,12 +56,3 @@ class ApartmentBL:
     ) -> List[str]:
         """Get all post IDs for a specific group"""
         return await ApartmentDAL.get_post_ids_by_group(db, group_id)
-
-    @classmethod
-    async def get_user_apartments(
-        cls,
-        db: AsyncSession,
-        user_id: int
-    ) -> List[Apartment]:
-        """Get all apartments for a specific user"""
-        return await ApartmentDAL.get_by_user(db, user_id)

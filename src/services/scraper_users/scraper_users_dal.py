@@ -41,26 +41,6 @@ class ScraperUserDAL:
         return result.scalars().first()
 
     @classmethod
-    async def get_all(
-        cls,
-        db: AsyncSession
-    ) -> List[ScraperUser]:
-        """Get all scraper users"""
-        result = await db.execute(select(ScraperUser))
-        return list(result.scalars().all())
-
-    @classmethod
-    async def get_active(
-        cls,
-        db: AsyncSession
-    ) -> List[ScraperUser]:
-        """Get all active scraper users"""
-        result = await db.execute(
-            select(ScraperUser).where(ScraperUser.is_active == True)
-        )
-        return list(result.scalars().all())
-
-    @classmethod
     async def add(
         cls,
         db: AsyncSession, 
@@ -123,19 +103,6 @@ class ScraperUserDAL:
         return await cls.update(db, user_id, is_active=is_active)
 
     @classmethod
-    async def delete(
-        cls,
-        db: AsyncSession, 
-        user_id: int
-    ) -> bool:
-        """Delete a scraper user"""
-        result = await db.execute(
-            delete(ScraperUser).where(ScraperUser.id == user_id)
-        )
-        await db.commit()
-        return result.rowcount > 0
-
-    @classmethod
     async def save_session_data(
         cls,
         db: AsyncSession,
@@ -173,110 +140,3 @@ class ScraperUserDAL:
             )
         )
         return list(result.scalars().all())
-
-async def add_scraper_user(
-    db: AsyncSession, 
-    email: str,
-    source: str,
-    password: Optional[str] = None,
-    session_data: Optional[Dict[str, Any]] = None,
-    is_active: bool = True
-) -> ScraperUser:
-    """Add a new scraper user to the database"""
-    user = ScraperUser(
-        email=email,
-        source=source,
-        password=password,
-        session_data=json.dumps(session_data) if session_data else None,
-        last_login=datetime.now().isoformat(),
-        is_active=is_active
-    )
-    db.add(user)
-    await db.commit()
-    await db.refresh(user)
-    return user
-
-async def update_session_data(
-    db: AsyncSession, 
-    email: str,
-    source: str,
-    session_data: Dict[str, Any]
-) -> Optional[ScraperUser]:
-    """Update session data for a user"""
-    user = await ScraperUserDAL.get_by_email_source(db, email, source)
-    
-    if not user:
-        return None
-    
-    user.session_data = json.dumps(session_data)
-    user.last_login = datetime.now().isoformat()
-    
-    await db.commit()
-    await db.refresh(user)
-    return user
-
-async def get_session_data_by_email_source(
-    db: AsyncSession, 
-    email: str,
-    source: str
-) -> Optional[Dict[str, Any]]:
-    """Get session data for a user by email and source"""
-    user = await ScraperUserDAL.get_by_email_source(db, email, source)
-    
-    if not user or not user.session_data:
-        return None
-    
-    try:
-        return json.loads(user.session_data)
-    except json.JSONDecodeError:
-        return None
-
-async def update_user_active_status(
-    db: AsyncSession, 
-    email: str,
-    source: str, 
-    is_active: bool
-) -> Optional[ScraperUser]:
-    """Update user's active status"""
-    user = await ScraperUserDAL.get_by_email_source(db, email, source)
-    
-    if not user:
-        return None
-    
-    user.is_active = is_active
-    await db.commit()
-    await db.refresh(user)
-    return user
-
-async def get_all_active_users_by_source(
-    db: AsyncSession,
-    source: str
-) -> List[ScraperUser]:
-    """Get all active scraper users for a specific source"""
-    result = await db.execute(
-        select(ScraperUser).where(
-            (ScraperUser.is_active == True) &
-            (ScraperUser.source == source)
-        )
-    )
-    return list(result.scalars().all())
-
-async def get_all_active_users(db: AsyncSession) -> List[ScraperUser]:
-    """Get all active scraper users"""
-    result = await db.execute(select(ScraperUser).where(ScraperUser.is_active == True))
-    return list(result.scalars().all())
-
-async def delete_scraper_user(
-    db: AsyncSession, 
-    email: str,
-    source: str
-) -> bool:
-    """Delete a scraper user"""
-    user = await ScraperUserDAL.get_by_email_source(db, email, source)
-    
-    if not user:
-        return False
-    
-    await db.delete(user)
-    await db.commit()
-    return True 

@@ -21,27 +21,6 @@ class TelegramDAL:
         return result.scalars().first()
 
     @classmethod
-    async def get_by_user_id(
-        cls,
-        db: AsyncSession,
-        user_id: int
-    ) -> Optional[TelegramUser]:
-        """Get a Telegram user by user ID"""
-        result = await db.execute(
-            select(TelegramUser).where(TelegramUser.user_id == user_id)
-        )
-        return result.scalars().first()
-
-    @classmethod
-    async def get_all(
-        cls,
-        db: AsyncSession
-    ) -> List[TelegramUser]:
-        """Get all Telegram users"""
-        result = await db.execute(select(TelegramUser))
-        return list(result.scalars().all())
-
-    @classmethod
     async def get_active(
         cls,
         db: AsyncSession

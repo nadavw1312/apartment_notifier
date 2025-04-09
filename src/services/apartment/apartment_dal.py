@@ -13,7 +13,7 @@ class ApartmentDAL:
     """Data Access Layer for managing apartments"""
     
     @classmethod
-    async def add(
+    async def create_apartment(
         cls,
         session: AsyncSession,
         user: str,
@@ -62,25 +62,6 @@ class ApartmentDAL:
         return apartment
 
     @classmethod
-    async def get_all(
-        cls,
-        session: AsyncSession
-    ) -> list[Apartment]:
-        """Get all apartments"""
-        result = await session.execute(select(Apartment))
-        return list(result.scalars().all())
-
-    @classmethod
-    async def get_by_id(
-        cls,
-        session: AsyncSession,
-        apartment_id: int
-    ) -> Optional[Apartment]:
-        """Get a single apartment by its ID"""
-        result = await session.execute(select(Apartment).where(Apartment.id == apartment_id))
-        return result.scalar_one_or_none()
-
-    @classmethod
     async def get_post_ids_by_group(
         cls,
         session: AsyncSession,
@@ -101,25 +82,3 @@ class ApartmentDAL:
         except Exception as e:
             print(f"Error getting post IDs: {e}")
             return []
-
-    @classmethod
-    async def get_by_user(
-        cls,
-        session: AsyncSession,
-        user_id: int
-    ) -> list[Apartment]:
-        """Get all apartments for a specific user"""
-        # Get the user's email from the database
-        from src.services.user.user_models import User
-        user = await session.execute(
-            select(User).where(User.id == user_id)
-        )
-        user = user.scalar_one_or_none()
-        if not user:
-            return []
-
-        # Get apartments for this user's email
-        result = await session.execute(
-            select(Apartment).where(Apartment.user == user.email)
-        )
-        return list(result.scalars().all())

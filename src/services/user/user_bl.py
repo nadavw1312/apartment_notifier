@@ -26,22 +26,6 @@ class UserBL:
         return await UserDAL.get_by_email(db, email)
 
     @classmethod
-    async def get_all_users(
-        cls,
-        db: AsyncSession
-    ) -> List[User]:
-        """Get all users"""
-        return await UserDAL.get_all(db)
-
-    @classmethod
-    async def get_active_users(
-        cls,
-        db: AsyncSession
-    ) -> List[User]:
-        """Get all active users"""
-        return await UserDAL.get_active(db)
-
-    @classmethod
     async def create_user(
         cls,
         db: AsyncSession,
