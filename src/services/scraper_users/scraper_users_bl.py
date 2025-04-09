@@ -2,8 +2,8 @@ import json
 from typing import Dict, Any, Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services.scraper.scraper_users_dal import ScraperUserDAL
-from src.services.scraper.scraper_users_models import ScraperUser
+from src.services.scraper_users.scraper_users_dal import ScraperUserDAL
+from src.services.scraper_users.scraper_users_models import ScraperUser
 
 # Facebook-specific constants
 FACEBOOK_SOURCE = "facebook"

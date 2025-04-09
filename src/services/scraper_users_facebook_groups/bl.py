@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.services.scraper_users_facebook_groups.dal import ScraperUserFacebookGroupDAL
 from src.services.scraper_users_facebook_groups.models import ScraperUserFacebookGroup
-from src.services.scraper.scraper_users_bl import ScraperUserBL
+from src.services.scraper_users.scraper_users_bl import ScraperUserBL
 from src.services.facebook_groups.bl import FacebookGroupBL
 
 

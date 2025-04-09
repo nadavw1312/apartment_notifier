@@ -7,7 +7,7 @@ from typing import Dict, List, Any, Optional, Type, cast
 import json
 
 from src.db.sql_database import SQL_DB_MANAGER
-from src.services.scraper.scraper_users_bl import ScraperUserBL
+from src.services.scraper_users.scraper_users_bl import ScraperUserBL
 from src.workers.scrapers.base.base_scraper_manager import BaseScraperManager, SourceConfig
 from src.workers.scrapers.facebook.facebook_group_scraper import FacebookGroupScraper
 from playwright.async_api import async_playwright, StorageState
@@ -57,7 +57,7 @@ class FacebookScraperManager(BaseScraperManager[FacebookGroupScraper, FacebookUs
                 groups.append(FacebookGroupConfig(
                     source_id=group_data.get("group_id", ""),
                     group_id=group_data.get("group_id", ""),
-                    name=group_data.get("name", "Unknown Group"),
+                    name=group_data.get("name", ""),
                     config=group_config
                 ))
             
@@ -261,22 +261,10 @@ class FacebookScraperManager(BaseScraperManager[FacebookGroupScraper, FacebookUs
             # Get headless setting from global config
             headless = config.get("global", {}).get("headless", False)
             
-            # Convert session data to StorageState
-            storage_state = {
-                "cookies":session_data.get("cookies", []),
-                "origins":session_data.get("origins", [])
-            }
-            
-            # Convert StorageState back to dict for get_context
-            context_data = {
-                "cookies": session_data.get("cookies", []),
-                "origins": session_data.get("origins", [])
-            }
-            
             # Get browser context with session data
             context = await self._browser_manager.get_context(
                 user.email,
-                context_data,
+                session_data,
                 headless
             )
             
@@ -289,7 +277,7 @@ class FacebookScraperManager(BaseScraperManager[FacebookGroupScraper, FacebookUs
             for group in user.groups:
                 scraper = self.create_scraper_for_source(group, user)
                 # Initialize scraper with session data before running
-                await scraper.initialize_with_session_data(storage_state, user.email)
+                await scraper.initialize_with_session_data(session_data, user.email)
                 task = asyncio.create_task(self.run_scraper(scraper, max_cycles))
                 tasks.append(task)
             
@@ -372,7 +360,7 @@ class FacebookScraperManager(BaseScraperManager[FacebookGroupScraper, FacebookUs
                         groups.append(FacebookGroupConfig(
                             source_id=group_data.get("group_id", ""),
                             group_id=group_data.get("group_id", ""),
-                            name=group_data.get("name", "Unknown Group"),
+                            name=group_data.get("name", ""),
                             config=group_config
                         ))
                     

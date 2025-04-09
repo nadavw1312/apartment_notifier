@@ -260,7 +260,8 @@ class BaseScraper(ABC):
                     data = await self.extract_item_data(item)
                     
                     # Skip invalid items based on implementation-specific criteria
-                    if not self._is_valid_item(data):
+                    is_valid = self._is_valid_item(data)
+                    if is_valid == False:
                         skipped_count += 1
                         continue
                     
@@ -323,7 +324,7 @@ class BaseScraper(ABC):
             True if the item is valid, False otherwise
         """
         # Skip posts without a valid username
-        if data.get("user") == "Unknown":
+        if data.get("user") == "" or data['user'] is None:
             return False
             
         # Additional logic can be added here
@@ -341,7 +342,7 @@ class BaseScraper(ABC):
             Formatted string for logging
         """
         # Default implementation just returns ID
-        return f"ID={data.get('id', 'Unknown')}"
+        return f"ID={data.get('id', None)}"
     
     async def process_items(self, items):
         """
@@ -503,8 +504,8 @@ class BaseScraper(ABC):
             # Specific scrapers should override this to add source-specific fields
             prepared_data = {
                 "text": result.get("text", ""),
-                "user": result.get("user", "Unknown"),
-                "timestamp": result.get("timestamp", "Unknown"),
+                "user": result.get("user", ""),
+                "timestamp": result.get("timestamp", ""),
                 "image_urls": result.get("images", []),
                 "post_link": result.get("post_link", ""),
                 "price": result.get("price", None),
@@ -560,10 +561,10 @@ class BaseScraper(ABC):
         # Initialize data dictionary with defaults
         item_data = {
             "text": text,
-            "link": "Unknown",
-            "timestamp": "Unknown",
-            "user": "Unknown",
-            "user_link": "Unknown"
+            "link": "",
+            "timestamp": "",
+            "user": "",
+            "user_link": ""
         }
         
         try:

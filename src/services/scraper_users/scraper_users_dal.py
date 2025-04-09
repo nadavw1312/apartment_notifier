@@ -5,7 +5,7 @@ from sqlalchemy.future import select
 from sqlalchemy import update, delete
 from sqlalchemy.sql import and_
 from datetime import datetime
-from src.services.scraper.scraper_users_models import ScraperUser
+from src.services.scraper_users.scraper_users_models import ScraperUser
 
 class ScraperUserDAL:
     """Data Access Layer for managing scraper users"""

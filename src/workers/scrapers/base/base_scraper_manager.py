@@ -81,7 +81,7 @@ class BaseScraperManager(Generic[T, U, G], ABC):
                 # Create FacebookGroupConfig
                 groups.append(SourceConfig(
                     source_id=group_data.get("group_id", ""),
-                    name=group_data.get("name", "Unknown Group"),
+                    name=group_data.get("name", ""),
                     config=group_config
                 ))
             

@@ -216,7 +216,7 @@ class FacebookGroupScraper(BaseScraper):
         """
         return await expand_post_content(item, self.group_id)
     
-    async def _is_valid_item(self, data: Dict[str, Any]) -> bool:
+    def _is_valid_item(self, data: Dict[str, Any]) -> bool:
         """
         Check if an item is valid based on its data
         
@@ -227,7 +227,7 @@ class FacebookGroupScraper(BaseScraper):
             True if the item is valid, False otherwise
         """
         # Skip posts without a valid username
-        if data.get("user") == "Unknown":
+        if data.get("user") == "" or data['user'] is None:
             return False
             
         # Additional logic can be added here
@@ -243,8 +243,8 @@ class FacebookGroupScraper(BaseScraper):
         Returns:
             Formatted string for logging
         """
-        user = data.get("user", "Unknown")
-        date = data.get("timestamp", "Unknown")
+        user = data.get("user", "")
+        date = data.get("timestamp", "")
         return f"User={user}, Date={date}"
     
     async def save_item_data(self, data: Dict[str, Any]):
@@ -284,9 +284,9 @@ class FacebookGroupScraper(BaseScraper):
             original_post_data = self.batch_posts[index] if index < len(self.batch_posts) else {}
             
             # Extract Facebook-specific data
-            post_date_time = original_post_data.get("timestamp", "Unknown")
-            user_name = original_post_data.get("user", "Unknown")
-            original_post_link = original_post_data.get("link", "Unknown")
+            post_date_time = original_post_data.get("timestamp", "")
+            user_name = original_post_data.get("user", "")
+            original_post_link = original_post_data.get("link", "")
             
             # Get common prepared data from base class
             data = await super()._prepare_save_data(result, index)
@@ -296,13 +296,13 @@ class FacebookGroupScraper(BaseScraper):
             data["group_id"] = self.group_id
             
             # Use our extraction data for some fields if available
-            if user_name != "Unknown":
+            if user_name != "":
                 data["user"] = user_name
             
-            if post_date_time != "Unknown":
+            if post_date_time != "":
                 data["timestamp"] = post_date_time
                 
-            if original_post_link != "Unknown":
+            if original_post_link != "":
                 data["post_link"] = original_post_link
                 
             return data
@@ -369,13 +369,16 @@ class FacebookGroupScraper(BaseScraper):
             if permalink_element:
                 # Get the permalink
                 href = await permalink_element.get_attribute("href")
+                
                 if href and not href.startswith("http"):
                     href = f"https://www.facebook.com{href}"
-                return href
+                
+                clean_url = href.split("?")[0]
+                return clean_url
         except Exception as e:
             print(f"⚠️ [{self.group_id}] Error extracting post link: {e}")
         
-        return "Unknown"
+        return ""
     
     async def _extract_item_timestamp(self, element, page) -> str:
         """
@@ -408,7 +411,7 @@ class FacebookGroupScraper(BaseScraper):
         except Exception as e:
             print(f"⚠️ [{self.group_id}] Error extracting post timestamp: {e}")
         
-        return "Unknown"
+        return ""
     
     async def _extract_item_user(self, element, page) -> str:
         """
@@ -437,7 +440,7 @@ class FacebookGroupScraper(BaseScraper):
         except Exception as e:
             print(f"⚠️ [{self.group_id}] Error extracting username: {e}")
         
-        return "Unknown"
+        return ""
     
     async def _extract_item_user_link(self, element, page) -> str:
         """
@@ -469,7 +472,7 @@ class FacebookGroupScraper(BaseScraper):
         except Exception as e:
             print(f"⚠️ [{self.group_id}] Error extracting user link: {e}")
         
-        return "Unknown"
+        return ""
 
     async def cleanup(self):
         """Clean up resources"""
